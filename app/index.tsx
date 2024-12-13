@@ -1,9 +1,13 @@
-import MainMenu from "@/components/MainMenu";
 
+import { GameProvider } from "@/contexts/GameContext";
+import App from "./App";
 export default function Index() {
   return (
     <>
-<MainMenu />
+      <GameProvider>
+        <App />
+      </GameProvider>
+      
     </>
   );
 }
