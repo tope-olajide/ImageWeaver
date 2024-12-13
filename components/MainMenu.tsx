@@ -1,8 +1,9 @@
 import images from "@/assets/images";
 import { ImageBackground, View, Text, Pressable, StyleSheet } from "react-native";
-
+import { useGameContext } from "@/contexts/GameContext";
 import Animated, { LightSpeedInRight, LightSpeedOutLeft } from "react-native-reanimated";
 const MainMenu = () => {
+  const {switchGameState} = useGameContext()
 
   return (
     <Animated.View
@@ -37,7 +38,7 @@ const MainMenu = () => {
             Create Words from Pictures
           </Text>
           <View style={styles.buttonContainer}>
-            <Pressable  style={styles.otherButton}>
+            <Pressable onPress={()=>switchGameState("mainGame")} style={styles.otherButton}>
               <ImageBackground
                 source={images.button2}
                 resizeMode="contain"
