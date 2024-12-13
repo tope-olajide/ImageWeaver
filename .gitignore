@@ -35,4 +35,6 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-app-example
+gameQuests.ts
+tournamentQuests.ts
+app/quest-images/*.webp
