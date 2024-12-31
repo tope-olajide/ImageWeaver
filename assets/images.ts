@@ -11,5 +11,6 @@ const images = {
     button4: require("./images/button-4.png"),
     button5: require("./images/button-5.png"),
     sample: require("./images/sample.webp"),
+    tournamentBG: require("./images/tournamentBG.jpg"),
 }
 export default images
