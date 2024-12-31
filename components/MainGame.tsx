@@ -7,19 +7,34 @@ import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import LevelClearModal from "./LevelClearModal";
 import { gameQuests0, gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7 } from "@/app/gameQuests";
+import { BlobServiceClient } from "@azure/storage-blob";
 
 export interface Letter {
     letter: string;
     id: string;
     isUnLocked: boolean
 }
-
 const sampleData = {
     word: "travel",
     imageURL: images.sample,
     hint: "Move from one place to another, often over a long distance.",
 }
-const gameQuests = [gameQuests0, gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7]
+const account = process.env.EXPO_PUBLIC_AZURE_STORAGE_ACCOUNT_NAME;
+const sasToken = process.env.EXPO_PUBLIC_AZURE_STORAGE_SAS_TOKEN;
+const containerName = process.env.EXPO_PUBLIC_AZURE_STORAGE_CONTAINER_NAME;
+const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sasToken}`); 
+if (!containerName) {
+    throw new Error("Azure Storage container name is not defined");
+}
+const containerClient = blobServiceClient.getContainerClient(containerName);
+
+async function getBlobUrl(blobName: string) {
+    const blobClient = containerClient.getBlobClient(blobName);
+    const blobUrl = blobClient.url;
+    console.log(`Blob URL: ${blobUrl}`);
+    return blobUrl;
+}
+const gameQuests = [gameQuests0,/*  gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7 */]
 const MainGame = () => {
     const { switchGameState } = useGameContext()
     const [isHintLocked, setIsHintLocked] = useState(true)
@@ -27,7 +42,7 @@ const MainGame = () => {
     const [outputLetters, setOutputLetters] = useState<Letter[]>([]);
     const [solution, setSolution] = useState("");
     const [hints, setHints] = useState("");
-    const [questImageUrl, setQuestImageUrl] = useState();
+    const [questImageUrl, setQuestImageUrl] = useState<string | undefined>(undefined);
     const [currentQuest, setCurrentQuest] = useState();
     const [showInputLetters, setShowInputLetters] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
@@ -41,6 +56,7 @@ const MainGame = () => {
       const [unlockPrice, setUnlockPrice] = useState(500);
 
     useEffect(() => {
+        
         const timer = setTimeout(() => {
             setShowInputLetters(true);
         }, 300);
@@ -215,7 +231,7 @@ const MainGame = () => {
     }
     
     const loadGame = async (questData?: any, currentQuestArrayNumber2?:number, foundQuestsIndex2?:[]) => {
-        
+       await getBlobUrl("workout.webp")
           const newQuestIndex = generateRandomIndex(
             gameQuests[currentQuestArrayNumber].length,
             foundQuestsIndex
@@ -233,8 +249,9 @@ const MainGame = () => {
           
           // Set states based on newQuest directly
           setSolution(newQuest.word);
-          setHints(newQuest.hint);
-          setQuestImageUrl(newQuest.imageURL);
+        setHints(newQuest.hint);
+        const imageUrl = await getBlobUrl(newQuest.imageURL);
+          setQuestImageUrl(imageUrl);
     
           // Initialize output letters directly from newQuest.word
           setOutputLetters(initializeOutputLetters(newQuest.word));
