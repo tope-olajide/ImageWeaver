@@ -2,9 +2,69 @@ import images from "@/assets/images";
 import { ImageBackground, View, Text, Pressable, StyleSheet } from "react-native";
 import { useGameContext } from "@/contexts/GameContext";
 import Animated, { LightSpeedInRight, LightSpeedOutLeft } from "react-native-reanimated";
+import { useIsAuthenticated } from "@azure/msal-react";
+
+import { useMsal } from "@azure/msal-react";
+import Feather from '@expo/vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const storeIdToken = async (idToken: string) => {
+  try {
+    await AsyncStorage.setItem('idToken', idToken)
+  } catch (e) {
+    console.error(e)
+  }
+}
+export const getIdToken = async () => {
+  try {
+    const value = await AsyncStorage.getItem('idToken')
+    if(value !== null) {
+      return value
+    }
+  } catch(e) {
+    console.error(e)
+  }
+}
+const loginRequest = { scopes: ["user.read"] };
 const MainMenu = () => {
   const {switchGameState} = useGameContext()
+  const isAuthenticated = useIsAuthenticated();
+  const { instance } = useMsal();
+console.log({isAuthenticated})
+  const handleLogin = () => {
+      console.log("Login clicked")
+      instance
+        .loginPopup(loginRequest)
+        .then((response) => {
+          // Extract user info from the authentication response
+          const userId = response.account.homeAccountId; // Unique user ID
+          const username = response.account.username; // User's email/username
+          const name = response.account.name; // Full name (if available)
+          const idToken = response.idToken; // ID token JWT string
+          storeIdToken(idToken)
+          console.log("Response:", response);
+          console.log("User ID:", userId);
+          console.log("Username:", username);
+          console.log("Name:", name);
+          // You can use the user ID or other details as needed
+        })
+        .catch((e) => {
+          console.error("Login failed:", e);
+        });
+  };
 
+  const handleLogout = () => {
+    instance
+      .logoutPopup()
+      .then(() => {
+        console.log("User logged out successfully.");
+        // Perform any additional cleanup actions here
+      })
+      .catch((e) => {
+        console.error("Logout failed:", e);
+      });
+  };
+    
   return (
     <Animated.View
     entering={LightSpeedInRight.springify()
@@ -47,9 +107,87 @@ const MainMenu = () => {
                 <Text style={styles.otherButtonText}>Play</Text>
               </ImageBackground>
             </Pressable>
+
+            <Pressable onPress={()=>switchGameState("tournament")} style={styles.otherButton}>
+              <ImageBackground
+                source={images.button2}
+                resizeMode="contain"
+                style={styles.button3image}
+              >
+                <Text style={styles.otherButtonText}>Tournament</Text>
+              </ImageBackground>
+            </Pressable>
           </View>
+          
         </View>       
-      
+      <View
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                width: "100%",
+                justifyContent: "space-between",
+                alignItems: "center",
+              margin: 0,
+              position: "absolute",
+                bottom: 0,
+              }}
+            >
+              <Pressable style={{ margin: 10 }}>
+                <ImageBackground
+                  source={images.button1}
+                  resizeMode="contain"
+                  style={{
+                    width: 50,
+                    height: 50,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text style={styles.otherButtonText}>⚙</Text>
+                </ImageBackground>
+          </Pressable>
+          {isAuthenticated ?
+                 <Pressable
+            style={{ margin: 10 }}
+            onPress={handleLogout}
+              >
+                <ImageBackground
+                  source={images.button3}
+                  resizeMode="cover"
+                  style={{
+                    width: 50,
+                    height: 50,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                <Text style={styles.otherButtonText}>
+                  <Feather name="log-out" size={21} color="white" /></Text>
+                </ImageBackground>
+          </Pressable>:
+        
+         <Pressable    
+            style={{ margin: 10 }}
+            onPress={handleLogin}
+              >
+                <ImageBackground
+                  source={images.button3}
+                  resizeMode="cover"
+                  style={{
+                    width: 50,
+                    height: 50,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text style={styles.otherButtonText}>👤</Text>
+                </ImageBackground>
+          </Pressable>
+        }  
+            </View>
     </ImageBackground></Animated.View>
   );
 };

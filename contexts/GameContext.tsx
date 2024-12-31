@@ -1,6 +1,6 @@
 import { createContext, FC, ReactNode, useContext, useState } from "react";
 
-type GameState = 'mainMenu' | 'mainGame';
+type GameState = 'mainMenu' | 'mainGame' | 'tournament';
 
 interface GameContextProps {
     gameState: GameState;
@@ -14,7 +14,7 @@ interface GameProviderProps {
 const GameContext = createContext<GameContextProps | undefined>(undefined);
 
 export const GameProvider: FC<GameProviderProps> = ({ children }) => {
-    const [gameState, setGameState] = useState<GameState>('mainGame');
+    const [gameState, setGameState] = useState<GameState>('mainMenu');
 
     const switchGameState = (state: GameState) => {
         setGameState(state);
