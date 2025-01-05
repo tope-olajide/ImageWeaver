@@ -7,6 +7,8 @@ import { useIsAuthenticated } from "@azure/msal-react";
 import { useMsal } from "@azure/msal-react";
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { connectToSignalR, negotiateUrl } from "@/app/config/signalRService";
+import { useEffect } from "react";
 
 const storeIdToken = async (idToken: string) => {
   try {
@@ -25,6 +27,16 @@ export const getIdToken = async () => {
     console.error(e)
   }
 }
+useEffect(() => {
+  // Establish the connection to SignalR
+  connectToSignalR(negotiateUrl)
+      .then(() => {
+         console.log("connected successully")
+      })
+      .catch((err) => console.error("Error initializing SignalR connection", err));
+
+
+}, []);
 const loginRequest = { scopes: ["user.read"] };
 const MainMenu = () => {
   const {switchGameState} = useGameContext()

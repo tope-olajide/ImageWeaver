@@ -1,8 +1,10 @@
 import { Pressable, ImageBackground, StyleSheet, Text, View } from "react-native"
 import images from "../../assets/images"
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useEffect } from "react";
 
 const NewOrJoinView = ({ setTournamentState }: { setTournamentState: Dispatch<SetStateAction<string>> }) => {
+
+      
     return (
         <View>
             <Pressable

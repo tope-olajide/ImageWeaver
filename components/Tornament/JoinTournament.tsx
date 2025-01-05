@@ -6,6 +6,9 @@ import * as Clipboard from 'expo-clipboard';
 
 import { useToast } from "react-native-toast-notifications";
 import JoinedUsers from "./JoinedUsers";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getToken } from "@/app/config/getToken";
+import { invokeSignalREvent, userJoinedTournament } from "@/app/config/signalRService";
 
 const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<SetStateAction<string>> }) => {
 
@@ -16,6 +19,7 @@ const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<S
         setTournamentName( value );
     };
     const toast = useToast();
+
     const pasteFromClipboard = async () => {
         const clipboardContent = await Clipboard.getStringAsync();
         setTournamentName(clipboardContent)
@@ -26,13 +30,46 @@ const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<S
       if (!tournamentName) {
         toast.show("Please provide the tournament name", { type: "danger" });
         return;
-      }
+        }
+         const token = await getToken();
+                if (!token) {
+                    console.error("No token to send");
+                    return;
+                }
+        try {
+            const response = await fetch("http://localhost:7071/api/joinTournament", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ tournamentName }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to join tournament");
+            }
+
+            const data = await response.json();
+            console.log({ data });
+            await AsyncStorage.setItem('createdTournament', JSON.stringify(data.tournament));
+            await AsyncStorage.setItem('userId', data.userId);
+            await AsyncStorage.setItem('userName', data.name);
+           
+           
+            await userJoinedTournament(data.tournament)
+            setTournamentState("JoinedUsers");
+        } catch (error) {
+            // toast.show(error.message, { type: "danger" });
+            console.log({ error });
+        }
     };
+   
     
     if (isJoinedUsers) {
         return (
             <>
-        <JoinedUsers setTournamentState={setTournamentState} tournament={tournamentData!}/>
+        <JoinedUsers />
         </>)
     }
     return (
