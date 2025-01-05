@@ -7,9 +7,9 @@ import images from '../../assets/images';
 import { useToast } from "react-native-toast-notifications";
 
 import SpinnerModal from "../SpinnerModal";
-import { PublicClientApplication } from "@azure/msal-browser";
-import { loginRequest, msalConfig } from "@/app/authConfig";
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getToken, initializeMsal } from "@/app/config/getToken";
 const NumberOfPlayersView = ({ setTournamentState }: { setTournamentState: Dispatch<SetStateAction<string>> }) => {
     const [value, setValue] = useState<any>(null);
     const [isFocus, setIsFocus] = useState(false);
@@ -22,42 +22,8 @@ const NumberOfPlayersView = ({ setTournamentState }: { setTournamentState: Dispa
         { label: "3 Players", value: 3 },
         { label: "4 Players", value: 4 },
     ];
-    const msalInstance = new PublicClientApplication(msalConfig);
 
-    async function initializeMsal() {
-        await msalInstance.initialize();
-    }
 
-    async function getToken() {
-        try {
-            await msalInstance.initialize();
-            const account = msalInstance.getAllAccounts()[0]; // Get the first account
-            if (!account) {
-                throw new Error("No account found. User not logged in.");
-            }
-            // Attempt to get the token silently
-            const response = await msalInstance.acquireTokenSilent({
-                ...loginRequest,
-                account,
-            });
-            const currentTime = Math.floor(Date.now() / 1000);
-            if (response.expiresOn && response.expiresOn.getTime() / 1000 > currentTime) {
-                return response.idToken;
-            } else {
-                throw new Error("Token expired");
-            }
-        } catch (error) {
-            console.error("Failed to acquire token silently:", error);
-            // You can initiate an interactive login if silent acquisition fails
-            try {
-                const response = await msalInstance.loginPopup(loginRequest);
-                return response.idToken;
-            } catch (loginError) {
-                console.error("Login failed:", loginError);
-                throw new Error("Failed to acquire token");
-            }
-        }
-    }
 
     const handleCreateTournament = async () => {
         if (!value) {
@@ -90,7 +56,10 @@ const NumberOfPlayersView = ({ setTournamentState }: { setTournamentState: Dispa
 
             const data = await response.json();
             console.log({ data });
-
+            await AsyncStorage.setItem('createdTournament', JSON.stringify(data.tournament));
+            await AsyncStorage.setItem('userId', data.userId);
+            await AsyncStorage.setItem('userName', data.name);
+            setTournamentState("JoinedUsers");
         } catch (error) {
             // toast.show(error.message, { type: "danger" });
             console.log({ error });
