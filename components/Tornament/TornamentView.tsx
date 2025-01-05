@@ -13,6 +13,7 @@ import ConfirmTournamentView from './ConfirmTournamentView';
 import NumberOfPlayersView from './NumberOfPlayersView';
 import { useGameContext } from '@/contexts/GameContext';
 import JoinTournament from './JoinTournament';
+import JoinedUsers from './JoinedUsers';
 
 const TournamentView = () => {
   const {switchGameState} = useGameContext()
@@ -82,7 +83,8 @@ const TournamentView = () => {
                             tournamentState === "NewOrJoinTournament" ? <NewOrJoinView setTournamentState={setTournamentState} /> :
                                 tournamentState === "NewTournament" ? <ConfirmTournamentView setTournamentState={setTournamentState} /> : 
                                 tournamentState === "NumberOfPlayersView" ? <NumberOfPlayersView setTournamentState={setTournamentState} /> :
-                                tournamentState === "JoinTournament" ? <JoinTournament setTournamentState={setTournamentState} /> :
+                                        tournamentState === "JoinTournament" ? <JoinTournament setTournamentState={setTournamentState} /> :
+                                        tournamentState === "JoinedUsers" ? <JoinedUsers  /> :
                                 null} 
                     </View>
 
