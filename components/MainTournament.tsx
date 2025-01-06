@@ -1,3 +1,4 @@
+import React from "react";
 import images from "@/assets/images";
 import { View, StyleSheet, ImageBackground, Text, Pressable, Easing, } from "react-native"
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,6 +9,11 @@ import { useEffect, useState } from "react";
 import LevelClearModal from "./LevelClearModal";
 import { gameQuests0, gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7 } from "@/app/gameQuests";
 import { BlobServiceClient } from "@azure/storage-blob";
+import { Tournament } from "@/types";
+import tournamentQuests from "@/app/tournamentQuests";
+import { getToken } from "@/app/config/getToken";
+import TournamentWinnerModal from "./TournamentWinnerModal";
+import RunnerUpsModal from "./RunnerUpsModal";
 
 export interface Letter {
     letter: string;
@@ -22,7 +28,7 @@ const sampleData = {
 const account = process.env.EXPO_PUBLIC_AZURE_STORAGE_ACCOUNT_NAME;
 const sasToken = process.env.EXPO_PUBLIC_AZURE_STORAGE_SAS_TOKEN;
 const containerName = process.env.EXPO_PUBLIC_AZURE_STORAGE_CONTAINER_NAME;
-const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sasToken}`); 
+const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sasToken}`);
 if (!containerName) {
     throw new Error("Azure Storage container name is not defined");
 }
@@ -31,11 +37,15 @@ const containerClient = blobServiceClient.getContainerClient(containerName);
 async function getBlobUrl(blobName: string) {
     const blobClient = containerClient.getBlobClient(blobName);
     const blobUrl = blobClient.url;
-    console.log(`Blob URL: ${blobUrl}`);
     return blobUrl;
 }
 const gameQuests = [gameQuests0,/*  gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7 */]
-const MainGame = () => {
+interface TournamentProps {
+    tournament: Tournament;
+    userId: string;
+}
+
+const MainTournament = ({ tournament, userId }: TournamentProps) => {
     const { switchGameState } = useGameContext()
     const [isHintLocked, setIsHintLocked] = useState(true)
     const [inputLetters, setInputLetters] = useState<Letter[]>([]);
@@ -52,17 +62,17 @@ const MainGame = () => {
     const [currentQuestArrayNumber, setCurrentQuestArrayNumber] = useState(0);
     const [unlockedLettersIndex, setUnlockedLettersIndex] = useState<number[]>(
         []
-      );
-      const [unlockPrice, setUnlockPrice] = useState(500);
-
+    );
+    const [unlockPrice, setUnlockPrice] = useState(500);
+    const [isTournamentWinnerModal, setIsTournamentWinnerModal] = useState(false);
+    const [isTournamentRunnerUpModal, setIsTournamentRunnerUpModal] = useState(false);
     useEffect(() => {
-        
         const timer = setTimeout(() => {
             setShowInputLetters(true);
         }, 300);
-    
+
         return () => clearTimeout(timer); // Cleanup on unmount
-      }, []);
+    }, []);
     const initializeOutputLetters = (word: string): Letter[] => {
         return word
             .split("")
@@ -148,301 +158,299 @@ const MainGame = () => {
         let outputArray = [...outputLetters]
         // Step 1: Replace letters in outputArray
         for (let i = 0; i < outputArray.length; i++) {
-          if (!outputArray[i].isUnLocked) {
-            let letterToMove = outputArray[i].letter;
-            outputArray[i].letter = " ";
-    
-            // Step 2: Move the replaced letters into the inputArray
-            for (let j = 0; j < inputArray.length; j++) {
-              if (inputArray[j].letter === " " && !inputArray[j].isUnLocked) {
-                inputArray[j].letter = letterToMove;
-                break;
-              }
+            if (!outputArray[i].isUnLocked) {
+                let letterToMove = outputArray[i].letter;
+                outputArray[i].letter = " ";
+
+                // Step 2: Move the replaced letters into the inputArray
+                for (let j = 0; j < inputArray.length; j++) {
+                    if (inputArray[j].letter === " " && !inputArray[j].isUnLocked) {
+                        inputArray[j].letter = letterToMove;
+                        break;
+                    }
+                }
             }
-          }
         }
         setInputLetters(inputArray)
         setOutputLetters(outputArray)
     }
-    
+
     function shuffleArray(array: Letter[]) {
         replaceAndMoveLetters()
-    
+
         const shuffledArray = array.slice();
-        
+
         // Create a copy of the array
         for (let i = shuffledArray.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1)); // Generate a random index
-          [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]]; // Swap elements
+            const j = Math.floor(Math.random() * (i + 1)); // Generate a random index
+            [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]]; // Swap elements
         }
         // Update the id to be the index
         shuffledArray.forEach((item, index) => {
-          item.id = index.toString();
+            item.id = index.toString();
         });
         return shuffledArray;
-      }
+    }
     const shuffle = () => {
 
         const shuffledLetterArray = shuffleArray(inputLetters);
         //setOutputLetters(shuffledLetterArray)
         setInputLetters(shuffledLetterArray)
-     
+
     };
 
     function generateRandomIndex(arrayLength: number, exclude: Array<number>) {
         // Function to generate a random index within the array length
         function getRandomIndex(max: number) {
-          return Math.floor(Math.random() * max);
+            return Math.floor(Math.random() * max);
         }
-    
+
         // Ensure we have a valid array length
         if (arrayLength <= 0) {
-          throw new Error("Array length must be a positive integer");
+            throw new Error("Array length must be a positive integer");
         }
-    
+
         // Set to keep track of excluded indices for quick lookup
         const excludeSet = new Set(exclude);
-    
+
         let randomIndex;
         do {
-          randomIndex = getRandomIndex(arrayLength);
+            randomIndex = getRandomIndex(arrayLength);
         } while (excludeSet.has(randomIndex));
-    
+
         return randomIndex;
-      }
+    }
     function removeItemsIfNeeded() {
 
         const arr1 = [...foundQuestsIndex]
         const arr1Length = arr1.length;
         const arr2Length = gameQuests[currentQuestArrayNumber]?.length;
-        if (arr1Length >= arr2Length - 1 ) {
-          const itemsToRemoveCount = Math.floor(arr1Length);
-          arr1.splice(0, itemsToRemoveCount);
-          if (currentQuestArrayNumber >= gameQuests.length - 1) {
-            setCurrentQuestArrayNumber(1)
-            setFoundQuestsIndex([])
-          //  saveGameData()
-          }
-          else {
-            setCurrentQuestArrayNumber(currentQuestArrayNumber + 1);
-            setFoundQuestsIndex(arr1)
-          }
+        if (arr1Length >= arr2Length - 1) {
+            const itemsToRemoveCount = Math.floor(arr1Length);
+            arr1.splice(0, itemsToRemoveCount);
+            if (currentQuestArrayNumber >= gameQuests.length - 1) {
+                setCurrentQuestArrayNumber(1)
+                setFoundQuestsIndex([])
+                //  saveGameData()
+            }
+            else {
+                setCurrentQuestArrayNumber(currentQuestArrayNumber + 1);
+                setFoundQuestsIndex(arr1)
+            }
         }
     }
-    
-    const loadGame = async (questData?: any, currentQuestArrayNumber2?:number, foundQuestsIndex2?:[]) => {
-      
-          const newQuestIndex = generateRandomIndex(
-            gameQuests[currentQuestArrayNumber].length,
-            foundQuestsIndex
-          );
-    
-          const newQuest = questData ? questData : gameQuests[currentQuestArrayNumber][newQuestIndex];
-    
-          const gameData = await AsyncStorage.getItem('gameData');
-          const parsedGameData = gameData ? JSON.parse(gameData) : {};
-    
-          parsedGameData.currentQuest = newQuest;
-         // parsedGameData.foundQuestsIndex = foundQuestsIndex
-          console.log({ latest: parsedGameData, foundQuestsIndex})
-      
-      
-          // Set states based on newQuest directly
+
+    const loadGame = async () => {
+        const currentPlayer = tournament?.players.filter((eachPlayers) => {
+            return (eachPlayers.userId === userId);
+        });
+        const currentTournamentLevel = tournament.tournamentQuestIndexes[currentPlayer[0].level!]
+        const newQuest = tournamentQuests[currentTournamentLevel]
+
         setSolution(newQuest.word);
         setHints(newQuest.hint);
+
         const imageUrl = await getBlobUrl(newQuest.imageURL);
-          setQuestImageUrl(imageUrl);
-    
-          // Initialize output letters directly from newQuest.word
-          setOutputLetters(initializeOutputLetters(newQuest.word));
-    
-          // Randomize letters using newQuest.word
-          randomizeString(newQuest.word);
-    
-          removeItemsIfNeeded();
-          setCurrentQuest(newQuest);
-          setFoundQuestsIndex([...foundQuestsIndex, newQuestIndex]);
-          if (!questData) {
-             parsedGameData.foundQuestsIndex.push(newQuestIndex);
-          }
-         
-           await AsyncStorage.setItem('gameData', JSON.stringify(parsedGameData)); 
-        
-    
-      };
+        setQuestImageUrl(imageUrl);
 
-/*     useEffect(() => {
-        loadGame()
-    }, []); */
+        setOutputLetters(initializeOutputLetters(newQuest.word));
+        randomizeString(newQuest.word);
+    };
 
-
-    useEffect(() => {
-        const loader = async () => {
-          const gameData = await AsyncStorage.getItem('gameData') ||"";
+    /*     const calculateScores = async () => {
+            const newScores = 100 * solution.length;
+            setScores(scores + newScores);
+            setLevel(level + 1);
+            setIsHintLocked(true);
+            setUnlockedLettersIndex([]);
+            try {
+                const gameData = await AsyncStorage.getItem('gameData');
+                const parsedGameData = JSON.parse(gameData!);
+                console.log({ foundQuestsIndexuuuu: foundQuestsIndex })
     
-          if (gameData?.length) {
-            const parsedGameData = JSON.parse(gameData)
-            console.log({ parsedGameData })
-            loadGame(parsedGameData.currentQuest);
+                parsedGameData.scores = scores;
+                parsedGameData.level = level;
+                parsedGameData.currentQuestArrayNumber = currentQuestArrayNumber;
     
-    
-            setFoundQuestsIndex(  parsedGameData.foundQuestsIndex)
-            setScores(parsedGameData.scores)
-            setLevel(parsedGameData.level)
-            setCurrentQuestArrayNumber(parsedGameData.currentQuestArrayNumber)
-            console.log({foundQuestsIndexxxx:foundQuestsIndex})
-          }
-          else {
-            const defaultGameData = {
-              scores,
-              level,
-              foundQuestsIndex,
-              currentQuest: {},
-              currentQuestArrayNumber
+                await AsyncStorage.setItem('gameData', JSON.stringify(parsedGameData));
+            } catch (error) {
+                console.error('Error saving game data:', error);
             }
-           
-            await AsyncStorage.setItem('gameData', JSON.stringify(defaultGameData));
-            loadGame()
-          }
-        }
-        loader()
-      }, []);
-    const saveGameData = async () => {
-        try {
-          const gameData = await AsyncStorage.getItem('gameData');
-          const parsedGameData =JSON.parse(gameData!);
-    console.log({foundQuestsIndexuuuu:foundQuestsIndex})
-         // parsedGameData.foundQuestsIndex =  foundQuestsIndex;
-          parsedGameData.scores = scores;
-          parsedGameData.level = level;
-          parsedGameData.currentQuestArrayNumber = currentQuestArrayNumber;
     
-          await AsyncStorage.setItem('gameData', JSON.stringify(parsedGameData));
-        } catch (error) {
-          console.error('Error saving game data:', error);
-        }
-      };
-  
-       useEffect(() => {
-        saveGameData();
-      }, [scores]);
+        }; */
+
+    const [isUpdatingScores, setIsUpdatingScores] = useState(false);
     const calculateScores = async () => {
-          const newScores = 100 * solution.length;
-          setScores(scores + newScores);
-          setLevel(level + 1);
-          setIsHintLocked(true);
-          setUnlockedLettersIndex([]);
-          try {
-            const gameData = await AsyncStorage.getItem('gameData');
-            const parsedGameData =JSON.parse(gameData!);
-      console.log({foundQuestsIndexuuuu:foundQuestsIndex})
-            
-            parsedGameData.scores = scores;
-            parsedGameData.level = level;
-            parsedGameData.currentQuestArrayNumber = currentQuestArrayNumber;
-      
-            await AsyncStorage.setItem('gameData', JSON.stringify(parsedGameData));
-          } catch (error) {
-            console.error('Error saving game data:', error);
-          }
-        
-      };
-    
-  const checkWord = () => {
-    let word = "";
-    for (let item of outputLetters) {
-      word += item.letter;
-    }
-    if (word.length) {
-      if (word.toLowerCase() === solution.toLowerCase()) {
-        calculateScores();
-        setModalVisible(true);
 
-/*         setTimeout(() => {
-          setUnlockPrice(500);
+        const coins = 100 * solution.length;
+        const currentPlayer = tournament.players.filter((eachPlayers) => {
+            return (eachPlayers.userId === userId)
+        })
+        const token = await getToken();
+        if (!token) {
+            console.error("No token to send");
+            return;
+        }
+        setIsUpdatingScores(true)
+        // await updateScoreMutation({ tournamentName: tournament!.name, level: Number(currentPlayer[0].level), coins: Number(coins) })
+        try {
+            const response = await fetch('http://localhost:7071/api/updateLevel', {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    tournamentName: tournament.name,
+                    level: currentPlayer[0].level,
+                    coins: coins,
+                }),
+            });
 
-        }, 800); */
-      }
-    }
+            if (!response.ok) {
+                throw new Error('Failed to update level');
+            }
 
-    }
+            const data = await response.json();
+            console.log('Level updated successfully:', data);
+        } catch (error) {
+            console.log('Error updating level:', error);
+            setIsUpdatingScores(false)
+        }
+        setIsUpdatingScores(false)
+
+        setIsHintLocked(true);
+        setUnlockedLettersIndex([]);
+
+
+    };
+
+    const checkWord = () => {
+        let word = "";
+        for (let item of outputLetters) {
+            word += item.letter;
+        }
+        const currentPlayer = tournament.players.filter((eachPlayers) => {
+            return (eachPlayers.userId === userId);
+        })
+        if (word.toLowerCase() === solution.toLowerCase()) {
+            if (currentPlayer[0].level! < 5) {
+                setModalVisible(true);
+                calculateScores();
+                setUnlockPrice(500);
+            }
+            if (currentPlayer[0].level === 5) {
+                calculateScores();
+            }
+        }
+    };
+    useEffect(() => {
+        loadGame()
+    }, []);
     useEffect(() => {
         if (outputLetters.length > 0) {
-          checkWord();
+            checkWord();
         }
-      }, [outputLetters]);
+    }, [outputLetters]);
 
-      function unlockRandomLetter() {
+    function unlockRandomLetter() {
         replaceAndMoveLetters()
         const max = solution.length;
-    
+
         let newNumber;
-    
+
         if (unlockedLettersIndex.length >= max) {
-          console.log("All letters are already unlocked.");
-          return;
+            console.log("All letters are already unlocked.");
+            return;
         }
         do {
-          newNumber = Math.floor(Math.random() * max);
+            newNumber = Math.floor(Math.random() * max);
         } while (unlockedLettersIndex.includes(newNumber));
-    
+
         //push the newNumber into the unlockedLettersIndex array
         const unlockedLettersIndexClone = [...unlockedLettersIndex];
         unlockedLettersIndexClone.push(newNumber);
         setUnlockedLettersIndex(unlockedLettersIndexClone);
-    
+
         // the random letter that was unlocked
         const randomLetter = solution.charAt(newNumber);
-    
+
         const newOutputLetters = [...outputLetters];
-    
+
         newOutputLetters[newNumber] = {
-          letter: randomLetter.toLocaleUpperCase(),
-          id: String(newNumber),
-          isUnLocked: true
+            letter: randomLetter.toLocaleUpperCase(),
+            id: String(newNumber),
+            isUnLocked: true
         };
-    
+
         setOutputLetters(newOutputLetters);
-    
-    
+
+
         const lettersClone = [...inputLetters];
-    
+
         const index = lettersClone.findIndex((item) => {
-          if (item.isUnLocked === false) {
-    
-            return randomLetter.toUpperCase() === item.letter.toUpperCase();
-          }
-          return false;
+            if (item.isUnLocked === false) {
+
+                return randomLetter.toUpperCase() === item.letter.toUpperCase();
+            }
+            return false;
         });
-    
+
         lettersClone[index] = { ...lettersClone[index], letter: " ", isUnLocked: true };
-        
-        setScores(scores-unlockPrice)
+
+        setScores(scores - unlockPrice)
         setInputLetters(lettersClone);
         setUnlockPrice(unlockPrice * 2)
-      }    
-    
-      const toggleHint = () => {
+    }
+
+    const toggleHint = () => {
         setIsHintLocked(!isHintLocked);
-      }; 
+    };
 
 
 
-      const loadNextLevel = () => {
+    const loadNextLevel = () => {
         setModalVisible(false);
         loadGame();
-      };
+    };
 
+    useEffect(() => {
+        if (tournament.status === "ended") {
+        
+          if (tournament.winnerId === userId) {
+            setIsTournamentWinnerModal(true)
+          }
+          else {
+            setIsTournamentRunnerUpModal(true)
+          }
+        }
+      }, [ tournament]);
+
+    if (isTournamentWinnerModal) {
+        return (
+          <>
+            <TournamentWinnerModal tournamentCoins={tournament?.players[0].coinsPerLevel} players={tournament?.players} userId={userId} tournament={tournament} />
+          </>
+        )
+      }
     
+      if (isTournamentRunnerUpModal) {
+        return (
+          <>
+            <RunnerUpsModal tournament={tournament} userId={userId} />
+          </>
+        )
+      }
     return (
         <>
             {modalVisible ? <LevelClearModal
+                isUpdatingScores={isUpdatingScores}
                 modalVisible={modalVisible}
                 setModalVisible={setModalVisible}
                 outputLetters={outputLetters}
                 loadNextLevel={loadNextLevel}
-                isUpdatingScores={false}
-      /> : ""}
+
+            /> : ""}
             <Animated.View
                 entering={LightSpeedInRight.springify()
                     .damping(30)
@@ -458,7 +466,7 @@ const MainGame = () => {
                         .restDisplacementThreshold(0.1)
                         .restSpeedThreshold(5)} style={styles.container}>
                 <ImageBackground
-                    source={images.bg1}
+                    source={images.bg2}
                     resizeMode="cover"
                     style={{ width: "100%", height: "100%", opacity: 0.9 }}
                 >
@@ -467,7 +475,7 @@ const MainGame = () => {
                             backgroundColor: "rgba(0, 0, 0, 0.7)",
                             boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.7)',
                             elevation: 3,
-                            height: 70,
+                            minHeight: 100,
                             width: "100%",
                             display: "flex",
                             alignItems: "flex-end",
@@ -477,46 +485,67 @@ const MainGame = () => {
                             paddingBottom: 8,
                         }}
                     >
-                        <Pressable onPress={() => switchGameState("mainMenu")}>
-                            <Text selectable={false} style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>
-                                🔙
-                            </Text>
-                        </Pressable>
-                        <Text
-                            selectable={false}
+                        <View
                             style={{
-                                fontSize: 19,
-                                textShadowColor: "rgba(0, 0, 255, 1)",
-                                textShadowOffset: { width: -1, height: 1 },
-                                textShadowRadius: 15,
-                                color: "#fff",
-                                fontWeight: 700,
-                            }}
-                        >
-                            Level: {1}
-                        </Text>
-                        <Text
-                            style={{
+                                marginTop: 40,
+                                marginBottom: 10,
                                 display: "flex",
                                 flexDirection: "row",
-                                backgroundColor: "rgba(140, 0, 150, 0.7)",
-                                borderRadius: 11,
-                                paddingHorizontal: 5,
-                                paddingVertical: 2,
+                                justifyContent: "space-between",
+                                alignItems: "center",
                             }}
                         >
-                            <Text selectable={false} style={{ fontSize: 15, width: 22 }}>🪙</Text>
-                            <Text selectable={false}
+                            <Pressable>
+                                <Text
+                                    style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}
+                                >
+                                    🔙
+                                </Text>
+                            </Pressable>
+                            <Text
                                 style={{
                                     color: "#fff",
                                     fontSize: 15,
-
                                     fontWeight: "bold",
+                                    textTransform: "uppercase",
                                 }}
                             >
-                                {scores}
+                                🏆Tournament🏆
                             </Text>
-                        </Text>
+                        </View>
+                        <View
+                            style={{
+                                display: "flex",
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            {tournament?.players.map((eachPlayers) => {
+                                return (
+                                    <Text
+                                        key={eachPlayers.userId}
+                                        style={{
+                                            fontSize: 17,
+                                            textShadowColor: "rgba(0, 0, 255, 1)",
+                                            textShadowOffset: { width: -1, height: 1 },
+                                            textShadowRadius: 15,
+                                            color: "#fff",
+                                            fontWeight: "700",
+                                            textTransform: "capitalize",
+                                        }}
+                                    >
+                                        {eachPlayers.userId === userId
+                                            ? "You"
+                                            : eachPlayers.name}
+                                        :
+                                        {eachPlayers.level! + 1}
+                                        /5
+                                    </Text>
+                                );
+                            })}
+                        </View>
+
                     </View>
 
                     <View
@@ -594,26 +623,26 @@ const MainGame = () => {
                     >
                         {showInputLetters ?
                             <Animated.Text entering={SlideInUp.delay(500)} style={styles.outputBox}>
-                            {outputLetters.map((item, index) => (
-                                <Pressable
-                                    disabled={item.letter === "_" || item.letter === " " || item.isUnLocked === true ? true : false}
-                                    onPress={() => handleOutputLetterPress(item, index)}
-                                    key={index}
-                                    style={styles.outputButton}
-                                >
-                                    <ImageBackground
-                                        source={images.button2}
-                                        resizeMode="cover"
-                                        style={styles.outputBackgroundImage}
+                                {outputLetters.map((item, index) => (
+                                    <Pressable
+                                        disabled={item.letter === "_" || item.letter === " " || item.isUnLocked === true ? true : false}
+                                        onPress={() => handleOutputLetterPress(item, index)}
+                                        key={index}
+                                        style={styles.outputButton}
                                     >
-                                      {/*   <Text selectable={false} style={styles.buttonText}>{item.letter === "_" ? " " : item.letter}</Text> */}
-                                        {item.letter !== " " ? <Animated.Text entering={ZoomIn}
-                                            exiting={ZoomOut}
-                                        ><Text style={styles.buttonText}>{item.letter}</Text></Animated.Text> : <Text></Text>}
-                                    </ImageBackground>
-                                </Pressable>
-                            ))}
-                        </Animated.Text>:<Text style={styles.outputBox}></Text>}
+                                        <ImageBackground
+                                            source={images.button2}
+                                            resizeMode="cover"
+                                            style={styles.outputBackgroundImage}
+                                        >
+                                            {/*   <Text selectable={false} style={styles.buttonText}>{item.letter === "_" ? " " : item.letter}</Text> */}
+                                            {item.letter !== " " ? <Animated.Text entering={ZoomIn}
+                                                exiting={ZoomOut}
+                                            ><Text style={styles.buttonText}>{item.letter}</Text></Animated.Text> : <Text></Text>}
+                                        </ImageBackground>
+                                    </Pressable>
+                                ))}
+                            </Animated.Text> : <Text style={styles.outputBox}></Text>}
 
                     </View>
                     {showInputLetters ?
@@ -645,7 +674,7 @@ const MainGame = () => {
 
                                                 {item.letter !== " " ? <Animated.Text entering={ZoomIn}
                                                     exiting={ZoomOut}
-                                                ><Text style={styles.inputButtonText}>{item.letter}</Text></Animated.Text> :  <Text></Text>}
+                                                ><Text style={styles.inputButtonText}>{item.letter}</Text></Animated.Text> : <Text></Text>}
 
 
                                             </ImageBackground>
@@ -676,9 +705,9 @@ const MainGame = () => {
                                             >
 
                                                 {item.letter !== " " ? <Animated.View entering={ZoomIn}
-                                            
+
                                                     exiting={ZoomOut}
-                                                ><Text style={styles.inputButtonText}>{item.letter}</Text></Animated.View> :  <Text></Text>}
+                                                ><Text style={styles.inputButtonText}>{item.letter}</Text></Animated.View> : <Text></Text>}
 
 
                                             </ImageBackground>
@@ -742,7 +771,7 @@ const MainGame = () => {
                                     </ImageBackground>
                                 </Pressable>
                             </Animated.View>
-                        </View>: <View
+                        </View> : <View
                             style={[styles.flexItem3, { backgroundColor: "none", flex: 3 }]}
                         ></View>}
                 </ImageBackground>
@@ -883,16 +912,16 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         display: "flex",
     },
-inputButtonText: {
-    fontSize: 21,
-    color: "#fff",
-    fontWeight: "200",
-    textShadowColor: "rgba(255, 255, 255, 0.6)",
-    textShadowOffset: { width: 10, height: 10 },
-    textShadowRadius: 19,
-    fontFamily: "JungleAdventurer",
-    //JungleAdventurer, CANDSB
-},
+    inputButtonText: {
+        fontSize: 21,
+        color: "#fff",
+        fontWeight: "200",
+        textShadowColor: "rgba(255, 255, 255, 0.6)",
+        textShadowOffset: { width: 10, height: 10 },
+        textShadowRadius: 19,
+        fontFamily: "JungleAdventurer",
+        //JungleAdventurer, CANDSB
+    },
     button3image: {
         width: "100%",
         height: "100%",
@@ -923,6 +952,6 @@ inputButtonText: {
         justifyContent: "center",
     },
 });
-export default MainGame
+export default MainTournament
 
 

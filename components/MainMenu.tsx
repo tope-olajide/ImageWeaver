@@ -9,6 +9,7 @@ import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { connectToSignalR, negotiateUrl } from "@/app/config/signalRService";
 import { useEffect } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const storeIdToken = async (idToken: string) => {
   try {
@@ -27,22 +28,23 @@ export const getIdToken = async () => {
     console.error(e)
   }
 }
-useEffect(() => {
-  // Establish the connection to SignalR
-  connectToSignalR(negotiateUrl)
-      .then(() => {
-         console.log("connected successully")
-      })
-      .catch((err) => console.error("Error initializing SignalR connection", err));
 
-
-}, []);
 const loginRequest = { scopes: ["user.read"] };
 const MainMenu = () => {
   const {switchGameState} = useGameContext()
   const isAuthenticated = useIsAuthenticated();
   const { instance } = useMsal();
-console.log({isAuthenticated})
+  console.log({ isAuthenticated })
+  useEffect(() => {
+    // Establish the connection to SignalR
+    connectToSignalR(negotiateUrl)
+        .then(() => {
+           console.log("connected successully")
+        })
+        .catch((err) => console.error("Error initializing SignalR connection", err));
+  
+  
+  }, []);
   const handleLogin = () => {
       console.log("Login clicked")
       instance
@@ -122,11 +124,31 @@ console.log({isAuthenticated})
 
             <Pressable onPress={()=>switchGameState("tournament")} style={styles.otherButton}>
               <ImageBackground
-                source={images.button2}
+                source={images.button4}
                 resizeMode="contain"
                 style={styles.button3image}
               >
                 <Text style={styles.otherButtonText}>Tournament</Text>
+              </ImageBackground>
+            </Pressable>
+
+            <Pressable  style={styles.otherButton}>
+              <ImageBackground
+                source={images.button2}
+                resizeMode="contain"
+                style={styles.button3image}
+              >
+                <Text style={styles.otherButtonText}>How To Play</Text>
+              </ImageBackground>
+            </Pressable>
+
+            <Pressable  style={styles.otherButton}>
+              <ImageBackground
+                source={images.button4}
+                resizeMode="contain"
+                style={styles.button3image}
+              >
+                <Text style={styles.otherButtonText}>Highscores</Text>
               </ImageBackground>
             </Pressable>
           </View>
@@ -156,7 +178,8 @@ console.log({isAuthenticated})
                     justifyContent: "center",
                   }}
                 >
-                  <Text style={styles.otherButtonText}>⚙</Text>
+       
+              <MaterialCommunityIcons name="music" size={24} color="white" />
                 </ImageBackground>
           </Pressable>
           {isAuthenticated ?

@@ -20,6 +20,7 @@ interface LevelClearModalProps {
   setModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
   outputLetters: Letter[];
   loadNextLevel(): void;
+  isUpdatingScores: boolean;
 }
 
 const LevelClearModal: React.FC<LevelClearModalProps> = ({
@@ -27,6 +28,7 @@ const LevelClearModal: React.FC<LevelClearModalProps> = ({
   setModalVisible,
   outputLetters,
   loadNextLevel,
+  isUpdatingScores,
 
 }) => {
   const toggleModal = () => {
@@ -160,6 +162,7 @@ const LevelClearModal: React.FC<LevelClearModalProps> = ({
             <Pressable
               style={[styles.button, styles.buttonClose]}
               onPress={toggleModal}
+              disabled={isUpdatingScores} // Disable the button while updating scores
             >
               <ImageBackground
                 source={images.button2}
