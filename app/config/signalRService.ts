@@ -1,8 +1,10 @@
+import { Tournament } from "@/types";
 import * as signalR from "@microsoft/signalr";
 
 let connection: signalR.HubConnection ;
-export const negotiateUrl = "http://localhost:7071/api/negotiate"
-export const broadcastUrl = "http://localhost:7071/api/broadcast"
+export const negotiateUrl = "http://localhost:7071/api/negotiate";
+export const broadcastUrl = "http://localhost:7071/api/broadcast";
+
 // Function to create and connect the SignalR connection
 export async function connectToSignalR(negotiateUrl: string) {
     if (connection && connection.state === signalR.HubConnectionState.Connected) {
@@ -19,7 +21,6 @@ export async function connectToSignalR(negotiateUrl: string) {
                 accessTokenFactory: () => data.accessToken,
             })
             .configureLogging(signalR.LogLevel.Information)
-            .withAutomaticReconnect()
             .build();
 
         await connection.start();
@@ -32,7 +33,12 @@ export async function connectToSignalR(negotiateUrl: string) {
     }
 }
 
-export async function invokeSignalREvent(event, ...args) {
+interface SignalREventArgs {
+    event: string;
+    args: any[];
+}
+
+export async function invokeSignalREvent(event: string, ...args: any[]): Promise<void> {
     if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
         console.error(`Cannot invoke event ${event}: No active SignalR connection`);
         return;
@@ -62,7 +68,7 @@ export async function invokeSignalREvent(event, ...args) {
     }
 }
  */
-export async function userJoinedTournament(tournament) {
+export async function userJoinedTournament(tournament:Tournament) {
     if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
         console.error(`Cannot invoke event ${tournament.name}: No active SignalR connection`);
         return;
@@ -72,7 +78,7 @@ export async function userJoinedTournament(tournament) {
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({target:"UserJoin"+"-"+tournament.name, payload:tournament }),
+        body: JSON.stringify({target:tournament.name, payload:tournament }),
     })
     .then(() => {
         console.log("message sent");
@@ -82,7 +88,7 @@ export async function userJoinedTournament(tournament) {
     });
 }
 
-export function onSignalREvent(event, callback) {
+export function onSignalREvent(event: string, callback: (...args: any[]) => void): void {
     if (!connection) {
         console.error("No active SignalR connection");
         return;

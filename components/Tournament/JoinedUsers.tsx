@@ -8,8 +8,28 @@ import images from "@/assets/images";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { connectToSignalR, disconnectSignalR, onSignalREvent, userJoinedTournament } from "@/app/config/signalRService";
 import * as Clipboard from 'expo-clipboard';
+import { Tournament } from "@/types";
+import MainTournament from "../MainTournament";
 
-
+const tournamentSample: Tournament = {
+  name: "",
+  creatorId: "",
+  players: [
+    {
+      userId: "",
+      level: 0,
+      username: "",
+      coinsPerLevel: [{ level: 0, coins: 0 }],
+      name: ""
+    },
+    
+  ],
+  numberOfPlayers: 0,
+  status: "running",
+  startDate: Date.now(),
+  tournamentQuestIndexes: [1, 2, 3, 4, 5],
+  winnerId: ""
+};
 
 const negotiateUrl = "http://localhost:7071/api/negotiate";  // URL to negotiate the SignalR connection 
 const JoinedUsers = () => {
@@ -17,7 +37,7 @@ const JoinedUsers = () => {
   const [isPlayersComplete, setIsPlayersComplete] = useState(false);
 
 
-  const [createdTournament, setCreatedTournament] = useState(null);
+  const [createdTournament, setCreatedTournament] = useState<Tournament>(tournamentSample);
   const [userId, setUserId] = useState("");
   const [name, setName] = useState("");
   const [count, setCount] = useState(6);
@@ -44,7 +64,7 @@ const JoinedUsers = () => {
 
           .then(() => {
 
-            onSignalREvent("UserJoin" + "-" + parsedTournament?.name, (data) => {
+            onSignalREvent(parsedTournament?.name, (data) => {
               // Check if the event is for the current tournament
               console.log("Player joined", data);
               setCreatedTournament(data)
@@ -61,11 +81,28 @@ const JoinedUsers = () => {
     fetchData();
   }, []);
 
-
+  if (createdTournament.players.length === createdTournament.numberOfPlayers + 1) {
+    
+    return (
+      <View style={styles.centeredView}>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={true}
+        >
+          <View
+            style={styles.modalView}
+          >
+            <MainTournament  userId={userId} tournament={createdTournament} />
+          </View>
+        </Modal>
+      </View>
+    );
+  }
 
   return (
     <>
-      <View style={{ width: "80%" }}>
+      <View style={{ width: "80%", height:300 }}>
         <Text style={styles.title}>Tournament Name:</Text>
         <View style={styles.tournamentNameView}>
           <Text style={styles.tournamentNameText}>
@@ -109,7 +146,7 @@ const JoinedUsers = () => {
             alignItems: "center",
             justifyContent: "flex-start",
             height: "100%",
-            marginTop: 50,
+            marginTop: 0,
           }}
         >
           {/*    {isTournamentOver   ?<TournamentWinnerModal tournamentCoins={tournamentCoins} />:""} */}
@@ -133,17 +170,21 @@ const JoinedUsers = () => {
             </Text>
           </View>
 
-          <View style={{ marginBottom: 0, height: 120, marginTop: 20 }}>
+          <View style={{ marginBottom: 0, height: 120, marginTop: 20, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
             {loading ? (
               <Text style={{ fontSize: 20, color: "#fff" }}>- Nobody</Text>
             ) : (
               createdTournament.players?.map((player: any, index: any) => (
-                <Text style={{ fontSize: 20, color: "#fff" }} key={index}>
+                <><Text style={{ fontSize: 20, color: "#fff" }} key={index}>
                   - {player.userId === userId ? "You" : player.name}
                 </Text>
+                  
+                </>
+                
               ))
             )}
           </View>
+          <View style={{ display: "flex", flexDirection: "row", }}>
           <Text
             style={{
               color: "rgba(200, 200, 0, 0.8)",
@@ -153,7 +194,6 @@ const JoinedUsers = () => {
               textShadowOffset: { width: -1, height: 1 },
               textShadowRadius: 15,
               fontWeight: 700,
-              marginTop: 40,
               display: "flex",
               justifyContent: "center",
               flexDirection: "row",
@@ -164,11 +204,11 @@ const JoinedUsers = () => {
               ? "Tournament will start in " + count
               : "Waiting for others to join... "}
           </Text>
+          <ActivityIndicator size={27} color="rgba(250, 250, 250, 0.8)" /></View>
           <View
             style={{
               display: "none",
               flexDirection: "row",
-              marginTop: 40,
               justifyContent: "space-evenly",
               width: "100%",
             }}
@@ -295,11 +335,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginRight: 5,
   },
-  joinedUsersContainer: {
-    height: 100,
-    display: "flex",
-    flexWrap: "wrap",
-  },
+
 });
 
 export default JoinedUsers;
