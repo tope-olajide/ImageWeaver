@@ -6,6 +6,7 @@ import {
   Pressable,
   View,
   ImageBackground,
+  ActivityIndicator,
 } from "react-native";
 
 import LottieView from "lottie-react-native";
@@ -169,7 +170,7 @@ const LevelClearModal: React.FC<LevelClearModalProps> = ({
                 resizeMode="stretch"
                 style={[styles.button, { opacity: 0.8 }]}
               >
-                <Text style={styles.textStyle}>{"Next"}</Text>
+                {isUpdatingScores?<ActivityIndicator size={27} color="rgba(250, 250, 250, 0.8)" />:<Text style={styles.textStyle}>Next</Text>}
                 
               </ImageBackground>
             </Pressable>

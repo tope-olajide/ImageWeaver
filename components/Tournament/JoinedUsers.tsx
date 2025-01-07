@@ -60,8 +60,7 @@ const JoinedUsers = () => {
         const parsedTournament = JSON.parse(storedTournament!);
         console.log("storedTournament", parsedTournament.name);
         console.log("EVENT", "UserJoin" + "-" + parsedTournament.name)
-        connectToSignalR(negotiateUrl)
-
+        connectToSignalR()
           .then(() => {
 
             onSignalREvent(parsedTournament?.name, (data) => {

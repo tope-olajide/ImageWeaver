@@ -114,7 +114,7 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
     };
 
     /* This function removes the selected letter from the input and 
-      adds it to the output when the letter is pressed. */
+      add it to the output when the letter is pressed. */
 
     const handleInputLetterPress = (letter: Letter) => {
         let count = 0;
@@ -199,58 +199,21 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
 
     };
 
-    function generateRandomIndex(arrayLength: number, exclude: Array<number>) {
-        // Function to generate a random index within the array length
-        function getRandomIndex(max: number) {
-            return Math.floor(Math.random() * max);
-        }
 
-        // Ensure we have a valid array length
-        if (arrayLength <= 0) {
-            throw new Error("Array length must be a positive integer");
-        }
 
-        // Set to keep track of excluded indices for quick lookup
-        const excludeSet = new Set(exclude);
-
-        let randomIndex;
-        do {
-            randomIndex = getRandomIndex(arrayLength);
-        } while (excludeSet.has(randomIndex));
-
-        return randomIndex;
-    }
-    function removeItemsIfNeeded() {
-
-        const arr1 = [...foundQuestsIndex]
-        const arr1Length = arr1.length;
-        const arr2Length = gameQuests[currentQuestArrayNumber]?.length;
-        if (arr1Length >= arr2Length - 1) {
-            const itemsToRemoveCount = Math.floor(arr1Length);
-            arr1.splice(0, itemsToRemoveCount);
-            if (currentQuestArrayNumber >= gameQuests.length - 1) {
-                setCurrentQuestArrayNumber(1)
-                setFoundQuestsIndex([])
-                //  saveGameData()
-            }
-            else {
-                setCurrentQuestArrayNumber(currentQuestArrayNumber + 1);
-                setFoundQuestsIndex(arr1)
-            }
-        }
-    }
 
     const loadGame = async () => {
-        const currentPlayer = tournament?.players.filter((eachPlayers) => {
+        const currentPlayer = tournament.players.filter((eachPlayers) => {
             return (eachPlayers.userId === userId);
         });
         const currentTournamentLevel = tournament.tournamentQuestIndexes[currentPlayer[0].level!]
+        console.log({ currentTournamentLevel })
         const newQuest = tournamentQuests[currentTournamentLevel]
-
+const imageUrl = await getBlobUrl(newQuest.imageURL);
         setSolution(newQuest.word);
         setHints(newQuest.hint);
 
-        const imageUrl = await getBlobUrl(newQuest.imageURL);
+        
         setQuestImageUrl(imageUrl);
 
         setOutputLetters(initializeOutputLetters(newQuest.word));
@@ -292,9 +255,8 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
             return;
         }
         setIsUpdatingScores(true)
-        // await updateScoreMutation({ tournamentName: tournament!.name, level: Number(currentPlayer[0].level), coins: Number(coins) })
         try {
-            const response = await fetch('http://localhost:7071/api/updateLevel', {
+            const response = await fetch('https://image-weaver.azurewebsites.net/api/updatelevel', {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json",
@@ -308,6 +270,7 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
             });
 
             if (!response.ok) {
+                setIsUpdatingScores(false)
                 throw new Error('Failed to update level');
             }
 
@@ -317,12 +280,10 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
             console.log('Error updating level:', error);
             setIsUpdatingScores(false)
         }
-        setIsUpdatingScores(false)
-
+        
         setIsHintLocked(true);
         setUnlockedLettersIndex([]);
-
-
+        setIsUpdatingScores(false)
     };
 
     const checkWord = () => {
@@ -409,9 +370,9 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
 
 
 
-    const loadNextLevel = () => {
-        setModalVisible(false);
-        loadGame();
+    const loadNextLevel = async () => {
+         await loadGame();
+         setModalVisible(false);
     };
 
     useEffect(() => {
@@ -473,21 +434,23 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
                     <View
                         style={{
                             backgroundColor: "rgba(0, 0, 0, 0.7)",
-                            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.7)',
+                            shadowColor: "#000",
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.7,
+                            shadowRadius: 4,
                             elevation: 3,
                             minHeight: 100,
                             width: "100%",
                             display: "flex",
-                            alignItems: "flex-end",
                             justifyContent: "space-between",
-                            flexDirection: "row",
+                            flexDirection: "column",
                             paddingHorizontal: 12,
                             paddingBottom: 8,
                         }}
                     >
                         <View
                             style={{
-                                marginTop: 40,
+                                marginTop: 10,
                                 marginBottom: 10,
                                 display: "flex",
                                 flexDirection: "row",
@@ -631,7 +594,7 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
                                         style={styles.outputButton}
                                     >
                                         <ImageBackground
-                                            source={images.button2}
+                                            source={ item.isUnLocked ? images.button2 : images.button4}
                                             resizeMode="cover"
                                             style={styles.outputBackgroundImage}
                                         >
@@ -667,7 +630,7 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
                                             style={styles.inputButton}
                                         >
                                             <ImageBackground
-                                                source={images.button1}
+                                                source={images.button3}
                                                 resizeMode="cover"
                                                 style={styles.button1image}
                                             >
@@ -699,7 +662,7 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
                                             style={styles.inputButton}
                                         >
                                             <ImageBackground
-                                                source={images.button1}
+                                                source={images.button3}
                                                 resizeMode="cover"
                                                 style={styles.button1image}
                                             >
@@ -727,7 +690,7 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
                             >
                                 <Pressable style={styles.otherButton} onPress={toggleHint} disabled={!isHintLocked}>
                                     <ImageBackground
-                                        source={images.button2}
+                                        source={images.button4}
                                         resizeMode="stretch"
                                         style={styles.button3image}
                                     >
@@ -743,7 +706,7 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
                                 </Pressable>
                                 <Pressable style={styles.otherButton} onPress={shuffle}>
                                     <ImageBackground
-                                        source={images.button2}
+                                        source={images.button4}
                                         resizeMode="stretch"
                                         style={styles.button3image}
                                     >
@@ -756,7 +719,7 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
                                     onPress={unlockRandomLetter}
                                 >
                                     <ImageBackground
-                                        source={images.button2}
+                                        source={images.button4}
                                         resizeMode="stretch"
                                         style={styles.button3image}
                                     >
