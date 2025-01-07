@@ -9,12 +9,13 @@ import JoinedUsers from "./JoinedUsers";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getToken } from "@/app/config/getToken";
 import { invokeSignalREvent, userJoinedTournament } from "@/app/config/signalRService";
+import SpinnerModal from "../SpinnerModal";
 
 const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<SetStateAction<string>> }) => {
 
     const [tournamentName, setTournamentName] = useState("");
     const [isJoinedUsers, setIsJoinedUsers] = useState(false);
-    const [tournamentData, setTournamentData]  = useState<any>()
+    const [isJoiningTournament, setIsJoiningTournament] = useState(false);  
     const handleInputChange = (value: any) => {
         setTournamentName( value );
     };
@@ -37,7 +38,8 @@ const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<S
                     return;
                 }
         try {
-            const response = await fetch("http://localhost:7071/api/joinTournament", {
+            setIsJoiningTournament(true);
+            const response = await fetch("https://image-weaver.azurewebsites.net/api/jointournament", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -47,6 +49,7 @@ const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<S
             });
 
             if (!response.ok) {
+                setIsJoiningTournament(false);
                 throw new Error("Failed to join tournament");
             }
 
@@ -60,7 +63,12 @@ const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<S
             await userJoinedTournament(data.tournament)
             setTournamentState("JoinedUsers");
         } catch (error) {
-            // toast.show(error.message, { type: "danger" });
+            setIsJoiningTournament(false);
+             if (error instanceof Error) {
+                 toast.show(error.message, { type: "danger" });
+             } else {
+                 toast.show("An unknown error occurred", { type: "danger" });
+             }
             console.log({ error });
         }
     };
@@ -74,6 +82,7 @@ const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<S
     }
     return (
         <>
+            <SpinnerModal visible={isJoiningTournament} />
             <View style={{width: "80%"}}>
                 <Text style={styles.label}>Tournament Name</Text>
                 <View style={{ display: 'flex', flexDirection: "row", alignItems: 'center', justifyContent: "center", width: "100%",}}>

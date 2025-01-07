@@ -38,3 +38,5 @@ yarn-error.*
 gameQuests.ts
 tournamentQuests.ts
 app/quest-images/*.webp
+# Local Netlify folder
+.netlify

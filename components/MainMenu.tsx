@@ -37,7 +37,7 @@ const MainMenu = () => {
   console.log({ isAuthenticated })
   useEffect(() => {
     // Establish the connection to SignalR
-    connectToSignalR(negotiateUrl)
+    connectToSignalR()
         .then(() => {
            console.log("connected successully")
         })

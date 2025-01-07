@@ -602,7 +602,7 @@ const MainGame = () => {
                                     style={styles.outputButton}
                                 >
                                     <ImageBackground
-                                        source={images.button2}
+                                        source={ item.isUnLocked ? images.button4 : images.button2}
                                         resizeMode="cover"
                                         style={styles.outputBackgroundImage}
                                     >

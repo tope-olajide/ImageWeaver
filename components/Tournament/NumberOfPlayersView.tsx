@@ -13,8 +13,7 @@ import { getToken, initializeMsal } from "@/app/config/getToken";
 const NumberOfPlayersView = ({ setTournamentState }: { setTournamentState: Dispatch<SetStateAction<string>> }) => {
     const [value, setValue] = useState<any>(null);
     const [isFocus, setIsFocus] = useState(false);
-    const [isJoinedUsers, setIsJoinedUsers] = useState(false);
-    const [tournamentData, setTournamentData] = useState<any>()
+const [isCreatingTournament, setIsCreatingTournament] = useState(false);
     const toast = useToast();
     const data = [
         { label: "1 Player", value: 1 },
@@ -27,7 +26,7 @@ const NumberOfPlayersView = ({ setTournamentState }: { setTournamentState: Dispa
 
     const handleCreateTournament = async () => {
         if (!value) {
-            // toast.show("Please select the number of players you'd like to compete against.", { type: "danger", });
+             toast.show("Please select the number of players you'd like to compete against.", { type: "danger", });
             return;
         }
         console.log({ numberOfPlayers: value })
@@ -41,7 +40,8 @@ const NumberOfPlayersView = ({ setTournamentState }: { setTournamentState: Dispa
         }
 
         try {
-            const response = await fetch("http://localhost:7071/api/createTournament", {
+setIsCreatingTournament(true);
+            const response = await fetch("https://image-weaver.azurewebsites.net/api/createtournament", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -51,7 +51,9 @@ const NumberOfPlayersView = ({ setTournamentState }: { setTournamentState: Dispa
             });
 
             if (!response.ok) {
+                setIsCreatingTournament(false);
                 throw new Error("Failed to create tournament");
+                
             }
 
             const data = await response.json();
@@ -59,16 +61,18 @@ const NumberOfPlayersView = ({ setTournamentState }: { setTournamentState: Dispa
             await AsyncStorage.setItem('createdTournament', JSON.stringify(data.tournament));
             await AsyncStorage.setItem('userId', data.userId);
             await AsyncStorage.setItem('userName', data.name);
+            setIsCreatingTournament(false);
             setTournamentState("JoinedUsers");
+
         } catch (error) {
-            // toast.show(error.message, { type: "danger" });
+            toast.show((error as Error).message, { type: "danger" });
             console.log({ error });
         }
     };
 
     return (
         <View>
-            <SpinnerModal visible={false} />
+            <SpinnerModal visible={isCreatingTournament} />
             <View style={{ width: 350 }}>
                 <Text
                     style={{
