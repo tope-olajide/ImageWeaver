@@ -10,12 +10,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getToken } from "@/app/config/getToken";
 import { invokeSignalREvent, userJoinedTournament } from "@/app/config/signalRService";
 import SpinnerModal from "../SpinnerModal";
+import url from "@/app/config/getUrl";
 
 const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<SetStateAction<string>> }) => {
 
     const [tournamentName, setTournamentName] = useState("");
     const [isJoinedUsers, setIsJoinedUsers] = useState(false);
-    const [isJoiningTournament, setIsJoiningTournament] = useState(false);  
+    const [isJoiningTournament, setIsJoiningTournament] = useState(false);
     const handleInputChange = (value: any) => {
         setTournamentName( value );
     };
@@ -38,8 +39,9 @@ const JoinTournament = ({ setTournamentState }: { setTournamentState: Dispatch<S
                     return;
                 }
         try {
+       
             setIsJoiningTournament(true);
-            const response = await fetch("https://image-weaver.azurewebsites.net/api/jointournament", {
+            const response = await fetch(url.joinTournament, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

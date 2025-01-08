@@ -4,7 +4,7 @@ import { Dispatch, SetStateAction, useEffect } from "react";
 
 const NewOrJoinView = ({ setTournamentState }: { setTournamentState: Dispatch<SetStateAction<string>> }) => {
 
-      
+
     return (
         <View>
             <Pressable

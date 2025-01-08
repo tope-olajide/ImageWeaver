@@ -31,20 +31,22 @@ const tournamentSample: Tournament = {
   winnerId: ""
 };
 
-const negotiateUrl = "http://localhost:7071/api/negotiate";  // URL to negotiate the SignalR connection 
+
 const JoinedUsers = () => {
   const [loading, setLoading] = useState(true);
   const [isPlayersComplete, setIsPlayersComplete] = useState(false);
 
 
-  const [createdTournament, setCreatedTournament] = useState<Tournament>(tournamentSample);
+  const [createdTournament, setCreatedTournament] = useState<Tournament>();
   const [userId, setUserId] = useState("");
   const [name, setName] = useState("");
   const [count, setCount] = useState(6);
   const [players, setPlayers] = useState([]);
 
   const copyToClipboard = async () => {
-    await Clipboard.setStringAsync(createdTournament.name);
+    if (createdTournament) {
+      await Clipboard.setStringAsync(createdTournament.name);
+    }
     alert('Copied to clipboard!');
   };
   useEffect(() => {
@@ -80,7 +82,7 @@ const JoinedUsers = () => {
     fetchData();
   }, []);
 
-  if (createdTournament.players.length === createdTournament.numberOfPlayers + 1) {
+  if (createdTournament && createdTournament.players.length === createdTournament.numberOfPlayers + 1) {
     
     return (
       <View style={styles.centeredView}>
@@ -173,7 +175,7 @@ const JoinedUsers = () => {
             {loading ? (
               <Text style={{ fontSize: 20, color: "#fff" }}>- Nobody</Text>
             ) : (
-              createdTournament.players?.map((player: any, index: any) => (
+              createdTournament && createdTournament.players?.map((player, index: any) => (
                 <><Text style={{ fontSize: 20, color: "#fff" }} key={index}>
                   - {player.userId === userId ? "You" : player.name}
                 </Text>

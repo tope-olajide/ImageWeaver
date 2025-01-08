@@ -40,7 +40,8 @@ export const msalConfig: MsalConfig = {
     auth: {
         clientId: process.env.EXPO_PUBLIC_CLIENT_ID || "", // This is the ONLY mandatory field that you need to supply.
         authority: "https://login.microsoftonline.com/" + (process.env.EXPO_PUBLIC_TENANT_ID || ""),
-        redirectUri: "http://localhost:8081",
+        redirectUri: process.env.NODE_ENV === 'production'? 'https://imageweaver.netlify.app' : 'http://localhost:8081',    
+
     },
     cache: {
         cacheLocation: "sessionStorage", // This configures where your cache will be stored
