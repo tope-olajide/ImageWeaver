@@ -124,7 +124,6 @@ const MainMenu = () => {
               <Text style={styles.otherButtonText}>Play</Text>
               </ImageBackground>
             </Pressable>
-
             <Pressable onPress={() => switchGameState("tournament")} style={styles.otherButton}>
               <ImageBackground
                 source={images.button4}
