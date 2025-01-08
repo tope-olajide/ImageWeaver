@@ -7,13 +7,14 @@ import Animated, { BounceIn, BounceInDown, BounceInUp, BounceOut, FadeIn, FadeIn
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import LevelClearModal from "./LevelClearModal";
-import { gameQuests0, gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7 } from "@/app/gameQuests";
 import { BlobServiceClient } from "@azure/storage-blob";
 import { Tournament } from "@/types";
 import tournamentQuests from "@/app/tournamentQuests";
 import { getToken } from "@/app/config/getToken";
 import TournamentWinnerModal from "./TournamentWinnerModal";
 import RunnerUpsModal from "./RunnerUpsModal";
+import url from "@/app/config/getUrl";
+import { useSound } from "@/contexts/SoundContext";
 
 export interface Letter {
     letter: string;
@@ -39,15 +40,15 @@ async function getBlobUrl(blobName: string) {
     const blobUrl = blobClient.url;
     return blobUrl;
 }
-const gameQuests = [gameQuests0,/*  gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7 */]
 interface TournamentProps {
     tournament: Tournament;
     userId: string;
 }
 
 const MainTournament = ({ tournament, userId }: TournamentProps) => {
-    const { switchGameState } = useGameContext()
-    const [isHintLocked, setIsHintLocked] = useState(true)
+    const { playButtonSound, isPlaying, toggleSound, playSwitchSound } = useSound();
+    const { switchGameState } = useGameContext();
+    const [isHintLocked, setIsHintLocked] = useState(true);
     const [inputLetters, setInputLetters] = useState<Letter[]>([]);
     const [outputLetters, setOutputLetters] = useState<Letter[]>([]);
     const [solution, setSolution] = useState("");
@@ -206,6 +207,9 @@ const MainTournament = ({ tournament, userId }: TournamentProps) => {
         const currentPlayer = tournament.players.filter((eachPlayers) => {
             return (eachPlayers.userId === userId);
         });
+        console.log({ currentPlayer })
+        console.log({ tournamentQuestIndexes: tournament.tournamentQuestIndexes })
+        console.log({ currentPlayerLevel: currentPlayer[0].level })
         const currentTournamentLevel = tournament.tournamentQuestIndexes[currentPlayer[0].level!]
         console.log({ currentTournamentLevel })
         const newQuest = tournamentQuests[currentTournamentLevel]
@@ -256,7 +260,7 @@ const imageUrl = await getBlobUrl(newQuest.imageURL);
         }
         setIsUpdatingScores(true)
         try {
-            const response = await fetch('https://image-weaver.azurewebsites.net/api/updatelevel', {
+            const response = await fetch(url.updateLevel, {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json",

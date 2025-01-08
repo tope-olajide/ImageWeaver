@@ -10,6 +10,7 @@ import SpinnerModal from "../SpinnerModal";
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getToken, initializeMsal } from "@/app/config/getToken";
+import url from "@/app/config/getUrl";
 const NumberOfPlayersView = ({ setTournamentState }: { setTournamentState: Dispatch<SetStateAction<string>> }) => {
     const [value, setValue] = useState<any>(null);
     const [isFocus, setIsFocus] = useState(false);
@@ -40,8 +41,9 @@ const [isCreatingTournament, setIsCreatingTournament] = useState(false);
         }
 
         try {
-setIsCreatingTournament(true);
-            const response = await fetch("https://image-weaver.azurewebsites.net/api/createtournament", {
+            
+            setIsCreatingTournament(true);
+            const response = await fetch(url.createTournament, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -65,6 +67,7 @@ setIsCreatingTournament(true);
             setTournamentState("JoinedUsers");
 
         } catch (error) {
+            setIsCreatingTournament(false);
             toast.show((error as Error).message, { type: "danger" });
             console.log({ error });
         }

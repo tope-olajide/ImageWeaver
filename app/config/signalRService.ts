@@ -1,11 +1,10 @@
 import { Tournament } from "@/types";
 import * as signalR from "@microsoft/signalr";
+import url from "./getUrl";
 
 let connection: signalR.HubConnection ;
-export const negotiateUrl = "https://image-weaver.azurewebsites.net/api/negotiate";
-export const broadcastUrl = "https://image-weaver.azurewebsites.net/api/broadcast";
 
-// Function to create and connect the SignalR connection
+
 export async function connectToSignalR() {
     if (connection && connection.state === signalR.HubConnectionState.Connected) {
         console.log("Already connected to SignalR");
@@ -13,7 +12,7 @@ export async function connectToSignalR() {
     }
 
     try {
-        const response = await fetch(negotiateUrl);
+        const response = await fetch(url.negotiate);
         const data = await response.json();
 
         connection = new signalR.HubConnectionBuilder()
@@ -73,7 +72,7 @@ export async function userJoinedTournament(tournament:Tournament) {
         console.error(`Cannot invoke event ${tournament.name}: No active SignalR connection`);
         return;
     }
-    fetch(broadcastUrl, {
+    fetch(url.broadcast, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
