@@ -1,3 +1,4 @@
+import React from "react";
 import images from "@/assets/images";
 import { View, StyleSheet, ImageBackground, Text, Pressable, Easing, } from "react-native"
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,6 +9,7 @@ import { useEffect, useState } from "react";
 import LevelClearModal from "./LevelClearModal";
 import { gameQuests0, gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7 } from "@/app/gameQuests";
 import { BlobServiceClient } from "@azure/storage-blob";
+import { getToken, initializeMsal } from "@/app/config/getToken";
 
 export interface Letter {
     letter: string;
@@ -22,7 +24,7 @@ const sampleData = {
 const account = process.env.EXPO_PUBLIC_AZURE_STORAGE_ACCOUNT_NAME;
 const sasToken = process.env.EXPO_PUBLIC_AZURE_STORAGE_SAS_TOKEN;
 const containerName = process.env.EXPO_PUBLIC_AZURE_STORAGE_CONTAINER_NAME;
-const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sasToken}`); 
+const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sasToken}`);
 if (!containerName) {
     throw new Error("Azure Storage container name is not defined");
 }
@@ -31,7 +33,6 @@ const containerClient = blobServiceClient.getContainerClient(containerName);
 async function getBlobUrl(blobName: string) {
     const blobClient = containerClient.getBlobClient(blobName);
     const blobUrl = blobClient.url;
-    console.log(`Blob URL: ${blobUrl}`);
     return blobUrl;
 }
 const gameQuests = [gameQuests0,/*  gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7 */]
@@ -47,22 +48,22 @@ const MainGame = () => {
     const [showInputLetters, setShowInputLetters] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [level, setLevel] = useState(1);
-    const [scores, setScores] = useState(5000);
+    const [coins, setCoins] = useState(5000);
     const [foundQuestsIndex, setFoundQuestsIndex] = useState<Array<number>>([]);
     const [currentQuestArrayNumber, setCurrentQuestArrayNumber] = useState(0);
     const [unlockedLettersIndex, setUnlockedLettersIndex] = useState<number[]>(
         []
-      );
-      const [unlockPrice, setUnlockPrice] = useState(500);
+    );
+    const [unlockPrice, setUnlockPrice] = useState(50);
 
     useEffect(() => {
-        
+
         const timer = setTimeout(() => {
             setShowInputLetters(true);
         }, 300);
-    
+
         return () => clearTimeout(timer); // Cleanup on unmount
-      }, []);
+    }, []);
     const initializeOutputLetters = (word: string): Letter[] => {
         return word
             .split("")
@@ -117,7 +118,6 @@ const MainGame = () => {
         if (count >= outputLetters.length) {
             return;
         }
-        console.log("clicked", letter.letter)
         setInputLetters((prevLetters) =>
             prevLetters.map((item) =>
                 item.id === letter.id ? { ...item, letter: " ", id: item.id } : item
@@ -134,7 +134,7 @@ const MainGame = () => {
         });
     };
     const handleOutputLetterPress = (item: Letter, index: number) => {
-        console.log(index);
+     
         const letterClone = [...inputLetters];
         letterClone[Number(item.id)] = { letter: item.letter, id: String(item.id), isUnLocked: item.isUnLocked };
         setInputLetters(letterClone);
@@ -148,292 +148,280 @@ const MainGame = () => {
         let outputArray = [...outputLetters]
         // Step 1: Replace letters in outputArray
         for (let i = 0; i < outputArray.length; i++) {
-          if (!outputArray[i].isUnLocked) {
-            let letterToMove = outputArray[i].letter;
-            outputArray[i].letter = " ";
-    
-            // Step 2: Move the replaced letters into the inputArray
-            for (let j = 0; j < inputArray.length; j++) {
-              if (inputArray[j].letter === " " && !inputArray[j].isUnLocked) {
-                inputArray[j].letter = letterToMove;
-                break;
-              }
+            if (!outputArray[i].isUnLocked) {
+                let letterToMove = outputArray[i].letter;
+                outputArray[i].letter = " ";
+
+                // Step 2: Move the replaced letters into the inputArray
+                for (let j = 0; j < inputArray.length; j++) {
+                    if (inputArray[j].letter === " " && !inputArray[j].isUnLocked) {
+                        inputArray[j].letter = letterToMove;
+                        break;
+                    }
+                }
             }
-          }
         }
         setInputLetters(inputArray)
         setOutputLetters(outputArray)
     }
-    
+
     function shuffleArray(array: Letter[]) {
         replaceAndMoveLetters()
-    
+
         const shuffledArray = array.slice();
-        
+
         // Create a copy of the array
         for (let i = shuffledArray.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1)); // Generate a random index
-          [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]]; // Swap elements
+            const j = Math.floor(Math.random() * (i + 1)); // Generate a random index
+            [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]]; // Swap elements
         }
         // Update the id to be the index
         shuffledArray.forEach((item, index) => {
-          item.id = index.toString();
+            item.id = index.toString();
         });
         return shuffledArray;
-      }
-    const shuffle = () => {
+    }
 
+    const shuffle = () => {
         const shuffledLetterArray = shuffleArray(inputLetters);
         //setOutputLetters(shuffledLetterArray)
         setInputLetters(shuffledLetterArray)
-     
     };
 
     function generateRandomIndex(arrayLength: number, exclude: Array<number>) {
         // Function to generate a random index within the array length
         function getRandomIndex(max: number) {
-          return Math.floor(Math.random() * max);
+            return Math.floor(Math.random() * max);
         }
-    
+
         // Ensure we have a valid array length
         if (arrayLength <= 0) {
-          throw new Error("Array length must be a positive integer");
+            throw new Error("Array length must be a positive integer");
         }
-    
+
         // Set to keep track of excluded indices for quick lookup
         const excludeSet = new Set(exclude);
-    
+
         let randomIndex;
         do {
-          randomIndex = getRandomIndex(arrayLength);
+            randomIndex = getRandomIndex(arrayLength);
         } while (excludeSet.has(randomIndex));
-    
-        return randomIndex;
-      }
-    function removeItemsIfNeeded() {
 
+        return randomIndex;
+    }
+    function removeItemsIfNeeded() {
         const arr1 = [...foundQuestsIndex]
         const arr1Length = arr1.length;
         const arr2Length = gameQuests[currentQuestArrayNumber]?.length;
-        if (arr1Length >= arr2Length - 1 ) {
-          const itemsToRemoveCount = Math.floor(arr1Length);
-          arr1.splice(0, itemsToRemoveCount);
-          if (currentQuestArrayNumber >= gameQuests.length - 1) {
-            setCurrentQuestArrayNumber(1)
-            setFoundQuestsIndex([])
-          //  saveGameData()
-          }
-          else {
-            setCurrentQuestArrayNumber(currentQuestArrayNumber + 1);
-            setFoundQuestsIndex(arr1)
-          }
+        if (arr1Length >= arr2Length - 1) {
+            const itemsToRemoveCount = Math.floor(arr1Length);
+            arr1.splice(0, itemsToRemoveCount);
+            if (currentQuestArrayNumber >= gameQuests.length - 1) {
+                setCurrentQuestArrayNumber(1)
+                setFoundQuestsIndex([])
+                //  saveGameData()
+            }
+            else {
+                setCurrentQuestArrayNumber(currentQuestArrayNumber + 1);
+                setFoundQuestsIndex(arr1)
+            }
         }
     }
-    
-    const loadGame = async (questData?: any, currentQuestArrayNumber2?:number, foundQuestsIndex2?:[]) => {
-      
-          const newQuestIndex = generateRandomIndex(
+
+    const loadGame = async (questData?: any) => {
+
+        const newQuestIndex = generateRandomIndex(
             gameQuests[currentQuestArrayNumber].length,
             foundQuestsIndex
-          );
-    
-          const newQuest = questData ? questData : gameQuests[currentQuestArrayNumber][newQuestIndex];
-    
-          const gameData = await AsyncStorage.getItem('gameData');
-          const parsedGameData = gameData ? JSON.parse(gameData) : {};
-    
-          parsedGameData.currentQuest = newQuest;
-         // parsedGameData.foundQuestsIndex = foundQuestsIndex
-          console.log({ latest: parsedGameData, foundQuestsIndex})
-      
-      
-          // Set states based on newQuest directly
+        );
+
+        const newQuest = questData ? questData : gameQuests[currentQuestArrayNumber][newQuestIndex];
+
+
         setSolution(newQuest.word);
         setHints(newQuest.hint);
         const imageUrl = await getBlobUrl(newQuest.imageURL);
-          setQuestImageUrl(imageUrl);
-    
-          // Initialize output letters directly from newQuest.word
-          setOutputLetters(initializeOutputLetters(newQuest.word));
-    
-          // Randomize letters using newQuest.word
-          randomizeString(newQuest.word);
-    
-          removeItemsIfNeeded();
-          setCurrentQuest(newQuest);
-          setFoundQuestsIndex([...foundQuestsIndex, newQuestIndex]);
-          if (!questData) {
-             parsedGameData.foundQuestsIndex.push(newQuestIndex);
-          }
-         
-           await AsyncStorage.setItem('gameData', JSON.stringify(parsedGameData)); 
-        
-    
-      };
+        setQuestImageUrl(imageUrl);
 
-/*     useEffect(() => {
-        loadGame()
-    }, []); */
+        setOutputLetters(initializeOutputLetters(newQuest.word));
+
+        randomizeString(newQuest.word);
+
+        removeItemsIfNeeded();
+        setCurrentQuest(newQuest);
+        setFoundQuestsIndex([...foundQuestsIndex, newQuestIndex]);
+
+        saveGameData()
+        const isNewGame = await AsyncStorage.getItem('isNewGame');
+        if (isNewGame === null || isNewGame === 'true') {
+            await AsyncStorage.setItem('isNewGame', 'false');
+        }
+    };
+
 
 
     useEffect(() => {
         const loader = async () => {
-          const gameData = await AsyncStorage.getItem('gameData') ||"";
-    
-          if (gameData?.length) {
-            const parsedGameData = JSON.parse(gameData)
-            console.log({ parsedGameData })
-            loadGame(parsedGameData.currentQuest);
-    
-    
-            setFoundQuestsIndex(  parsedGameData.foundQuestsIndex)
-            setScores(parsedGameData.scores)
-            setLevel(parsedGameData.level)
-            setCurrentQuestArrayNumber(parsedGameData.currentQuestArrayNumber)
-            console.log({foundQuestsIndexxxx:foundQuestsIndex})
-          }
-          else {
-            const defaultGameData = {
-              scores,
-              level,
-              foundQuestsIndex,
-              currentQuest: {},
-              currentQuestArrayNumber
+            await initializeMsal(); // Ensure MSAL is initialized before getting the token
+            const token = await getToken();
+            if (!token) {
+                console.error("No token to send");
+                return;
             }
-           
-            await AsyncStorage.setItem('gameData', JSON.stringify(defaultGameData));
-            loadGame()
-          }
+            const response = await fetch('http://localhost:7071/api/fetchGameData',
+
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+            if (response.status === 404) {
+                console.log('No game data found');
+                 loadGame();
+                
+                
+            } else {
+                const savedGameData = await response.json();
+               
+                if (savedGameData?.length) {
+                  
+                    loadGame(savedGameData[0].currentQuest);
+                    
+                    setFoundQuestsIndex(savedGameData[0].foundQuestsIndex);
+
+                    setCoins(savedGameData[0].coins);
+                    setLevel(savedGameData[0].level);
+                    setCurrentQuestArrayNumber(savedGameData[0].currentQuestArrayNumber); 
+                }
+            } 
         }
         loader()
-      }, []);
+    }, []);
     const saveGameData = async () => {
         try {
-          const gameData = await AsyncStorage.getItem('gameData');
-          const parsedGameData =JSON.parse(gameData!);
-    console.log({foundQuestsIndexuuuu:foundQuestsIndex})
-         // parsedGameData.foundQuestsIndex =  foundQuestsIndex;
-          parsedGameData.scores = scores;
-          parsedGameData.level = level;
-          parsedGameData.currentQuestArrayNumber = currentQuestArrayNumber;
-    
-          await AsyncStorage.setItem('gameData', JSON.stringify(parsedGameData));
+            await initializeMsal(); // Ensure MSAL is initialized before getting the token
+            const token = await getToken();
+            if (!token) {
+                console.error("No token to send");
+                return;
+            }
+
+            const gameData = {
+                foundQuestsIndex,
+                coins,
+                level,
+                currentQuestArrayNumber,
+                currentQuest
+            }
+
+            await fetch('http://localhost:7071/api/saveGameData', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({gameData}),
+            });
+
         } catch (error) {
-          console.error('Error saving game data:', error);
-        }
-      };
-  
-       useEffect(() => {
-        saveGameData();
-      }, [scores]);
-    const calculateScores = async () => {
-          const newScores = 100 * solution.length;
-          setScores(scores + newScores);
-          setLevel(level + 1);
-          setIsHintLocked(true);
-          setUnlockedLettersIndex([]);
-          try {
-            const gameData = await AsyncStorage.getItem('gameData');
-            const parsedGameData =JSON.parse(gameData!);
-      console.log({foundQuestsIndexuuuu:foundQuestsIndex})
-            
-            parsedGameData.scores = scores;
-            parsedGameData.level = level;
-            parsedGameData.currentQuestArrayNumber = currentQuestArrayNumber;
-      
-            await AsyncStorage.setItem('gameData', JSON.stringify(parsedGameData));
-          } catch (error) {
             console.error('Error saving game data:', error);
-          }
-        
-      };
-    
-  const checkWord = () => {
-    let word = "";
-    for (let item of outputLetters) {
-      word += item.letter;
-    }
-    if (word.length) {
-      if (word.toLowerCase() === solution.toLowerCase()) {
-        calculateScores();
-        setModalVisible(true);
+        }
+    };
 
-/*         setTimeout(() => {
-          setUnlockPrice(500);
 
-        }, 800); */
-      }
-    }
+    const calculateCoins = async () => {
+        const newCoins = 100 * solution.length;
+        setCoins(coins + newCoins);
+        setLevel(level + 1);
+        setIsHintLocked(true);
+        setUnlockedLettersIndex([]);
+        await saveGameData()
+    };
+
+    const checkWord = () => {
+        let word = "";
+        for (let item of outputLetters) {
+            word += item.letter;
+        }
+        if (word.length) {
+            if (word.toLowerCase() === solution.toLowerCase()) {
+                calculateCoins();
+                setModalVisible(true);
+            }
+        }
 
     }
     useEffect(() => {
         if (outputLetters.length > 0) {
-          checkWord();
+            checkWord();
         }
-      }, [outputLetters]);
+    }, [outputLetters]);
 
-      function unlockRandomLetter() {
+    function unlockRandomLetter() {
         replaceAndMoveLetters()
         const max = solution.length;
-    
+
         let newNumber;
-    
+
         if (unlockedLettersIndex.length >= max) {
-          console.log("All letters are already unlocked.");
-          return;
+            console.log("All letters are already unlocked.");
+            return;
         }
         do {
-          newNumber = Math.floor(Math.random() * max);
+            newNumber = Math.floor(Math.random() * max);
         } while (unlockedLettersIndex.includes(newNumber));
-    
+
         //push the newNumber into the unlockedLettersIndex array
         const unlockedLettersIndexClone = [...unlockedLettersIndex];
         unlockedLettersIndexClone.push(newNumber);
         setUnlockedLettersIndex(unlockedLettersIndexClone);
-    
+
         // the random letter that was unlocked
         const randomLetter = solution.charAt(newNumber);
-    
+
         const newOutputLetters = [...outputLetters];
-    
+
         newOutputLetters[newNumber] = {
-          letter: randomLetter.toLocaleUpperCase(),
-          id: String(newNumber),
-          isUnLocked: true
+            letter: randomLetter.toLocaleUpperCase(),
+            id: String(newNumber),
+            isUnLocked: true
         };
-    
+
         setOutputLetters(newOutputLetters);
-    
-    
+
+
         const lettersClone = [...inputLetters];
-    
+
         const index = lettersClone.findIndex((item) => {
-          if (item.isUnLocked === false) {
-    
-            return randomLetter.toUpperCase() === item.letter.toUpperCase();
-          }
-          return false;
+            if (item.isUnLocked === false) {
+
+                return randomLetter.toUpperCase() === item.letter.toUpperCase();
+            }
+            return false;
         });
-    
+
         lettersClone[index] = { ...lettersClone[index], letter: " ", isUnLocked: true };
-        
-        setScores(scores-unlockPrice)
+
+        setCoins(coins - unlockPrice)
         setInputLetters(lettersClone);
         setUnlockPrice(unlockPrice * 2)
-      }    
-    
-      const toggleHint = () => {
+    }
+
+    const toggleHint = () => {
         setIsHintLocked(!isHintLocked);
-      }; 
+    };
 
 
 
-      const loadNextLevel = () => {
+    const loadNextLevel = () => {
         setModalVisible(false);
         loadGame();
-      };
+    };
 
-    
+
     return (
         <>
             {modalVisible ? <LevelClearModal
@@ -442,7 +430,7 @@ const MainGame = () => {
                 outputLetters={outputLetters}
                 loadNextLevel={loadNextLevel}
                 isUpdatingScores={false}
-      /> : ""}
+            /> : ""}
             <Animated.View
                 entering={LightSpeedInRight.springify()
                     .damping(30)
@@ -493,7 +481,7 @@ const MainGame = () => {
                                 fontWeight: 700,
                             }}
                         >
-                            Level: {1}
+                            Level: {level}
                         </Text>
                         <Text
                             style={{
@@ -514,7 +502,7 @@ const MainGame = () => {
                                     fontWeight: "bold",
                                 }}
                             >
-                                {scores}
+                                {coins}
                             </Text>
                         </Text>
                     </View>
@@ -594,26 +582,26 @@ const MainGame = () => {
                     >
                         {showInputLetters ?
                             <Animated.Text entering={SlideInUp.delay(500)} style={styles.outputBox}>
-                            {outputLetters.map((item, index) => (
-                                <Pressable
-                                    disabled={item.letter === "_" || item.letter === " " || item.isUnLocked === true ? true : false}
-                                    onPress={() => handleOutputLetterPress(item, index)}
-                                    key={index}
-                                    style={styles.outputButton}
-                                >
-                                    <ImageBackground
-                                        source={ item.isUnLocked ? images.button4 : images.button2}
-                                        resizeMode="cover"
-                                        style={styles.outputBackgroundImage}
+                                {outputLetters.map((item, index) => (
+                                    <Pressable
+                                        disabled={item.letter === "_" || item.letter === " " || item.isUnLocked === true ? true : false}
+                                        onPress={() => handleOutputLetterPress(item, index)}
+                                        key={index}
+                                        style={styles.outputButton}
                                     >
-                                      {/*   <Text selectable={false} style={styles.buttonText}>{item.letter === "_" ? " " : item.letter}</Text> */}
-                                        {item.letter !== " " ? <Animated.Text entering={ZoomIn}
-                                            exiting={ZoomOut}
-                                        ><Text style={styles.buttonText}>{item.letter}</Text></Animated.Text> : <Text></Text>}
-                                    </ImageBackground>
-                                </Pressable>
-                            ))}
-                        </Animated.Text>:<Text style={styles.outputBox}></Text>}
+                                        <ImageBackground
+                                            source={item.isUnLocked ? images.button4 : images.button2}
+                                            resizeMode="cover"
+                                            style={styles.outputBackgroundImage}
+                                        >
+                                            {/*   <Text selectable={false} style={styles.buttonText}>{item.letter === "_" ? " " : item.letter}</Text> */}
+                                            {item.letter !== " " ? <Animated.Text entering={ZoomIn}
+                                                exiting={ZoomOut}
+                                            ><Text style={styles.buttonText}>{item.letter}</Text></Animated.Text> : <Text></Text>}
+                                        </ImageBackground>
+                                    </Pressable>
+                                ))}
+                            </Animated.Text> : <Text style={styles.outputBox}></Text>}
 
                     </View>
                     {showInputLetters ?
@@ -645,7 +633,7 @@ const MainGame = () => {
 
                                                 {item.letter !== " " ? <Animated.Text entering={ZoomIn}
                                                     exiting={ZoomOut}
-                                                ><Text style={styles.inputButtonText}>{item.letter}</Text></Animated.Text> :  <Text></Text>}
+                                                ><Text style={styles.inputButtonText}>{item.letter}</Text></Animated.Text> : <Text></Text>}
 
 
                                             </ImageBackground>
@@ -676,9 +664,9 @@ const MainGame = () => {
                                             >
 
                                                 {item.letter !== " " ? <Animated.View entering={ZoomIn}
-                                            
+
                                                     exiting={ZoomOut}
-                                                ><Text style={styles.inputButtonText}>{item.letter}</Text></Animated.View> :  <Text></Text>}
+                                                ><Text style={styles.inputButtonText}>{item.letter}</Text></Animated.View> : <Text></Text>}
 
 
                                             </ImageBackground>
@@ -707,7 +695,7 @@ const MainGame = () => {
                                             <Text style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', marginRight: 6 }}>
                                                 <Text selectable={false} style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0 }}>Hint</Text>
                                                 {/* <Text style={{borderBottomColor:"rgba(0,0,0,0.8)", borderBottomWidth:1,marginVertical:2, width:'70%',}}></Text> */}
-                                                <Text selectable={false} style={{ fontSize: 11, color: "#fff", fontWeight: 700, margin: 0, padding: 0, paddingHorizontal: 4, marginHorizontal: 5, backgroundColor: "rgba(0,0,250,0.6)", borderRadius: 5 }}>-1000</Text>
+                                                <Text selectable={false} style={{ fontSize: 11, color: "#fff", fontWeight: 700, margin: 0, padding: 0, paddingHorizontal: 4, marginHorizontal: 5, backgroundColor: "rgba(0,0,250,0.6)", borderRadius: 5 }}>-100</Text>
                                             </Text>
                                         </Text>
                                     </ImageBackground>
@@ -742,7 +730,7 @@ const MainGame = () => {
                                     </ImageBackground>
                                 </Pressable>
                             </Animated.View>
-                        </View>: <View
+                        </View> : <View
                             style={[styles.flexItem3, { backgroundColor: "none", flex: 3 }]}
                         ></View>}
                 </ImageBackground>
@@ -883,16 +871,16 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         display: "flex",
     },
-inputButtonText: {
-    fontSize: 21,
-    color: "#fff",
-    fontWeight: "200",
-    textShadowColor: "rgba(255, 255, 255, 0.6)",
-    textShadowOffset: { width: 10, height: 10 },
-    textShadowRadius: 19,
-    fontFamily: "JungleAdventurer",
-    //JungleAdventurer, CANDSB
-},
+    inputButtonText: {
+        fontSize: 21,
+        color: "#fff",
+        fontWeight: "200",
+        textShadowColor: "rgba(255, 255, 255, 0.6)",
+        textShadowOffset: { width: 10, height: 10 },
+        textShadowRadius: 19,
+        fontFamily: "JungleAdventurer",
+        //JungleAdventurer, CANDSB
+    },
     button3image: {
         width: "100%",
         height: "100%",

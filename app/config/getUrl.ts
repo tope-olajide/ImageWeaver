@@ -7,7 +7,10 @@ const url = {
   createTournament: `${BASE_URL}/createtournament`,
   joinTournament: `${BASE_URL}/jointournament`,
   negotiate: `${BASE_URL}/negotiate`,
-  updateLevel: `${BASE_URL}/updatelevel`,
+    updateLevel: `${BASE_URL}/updatelevel`,
+    saveGameData: `${BASE_URL}/saveGameData`,
+    fetchGameData: `${BASE_URL}/fetchGameData`,
 };
+
 
 export default url;

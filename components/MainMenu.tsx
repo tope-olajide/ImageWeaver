@@ -8,9 +8,10 @@ import { useMsal } from "@azure/msal-react";
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { connectToSignalR } from "@/app/config/signalRService";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSound } from "@/contexts/SoundContext";
+import HowToPlay from "./HowToPlay";
 
 const storeIdToken = async (idToken: string) => {
   try {
@@ -37,6 +38,7 @@ const MainMenu = () => {
   const { switchGameState } = useGameContext()
   const isAuthenticated = useIsAuthenticated();
   const { instance } = useMsal();
+  const [howToPlayModalVisible, setHowToPlayModalVisible] = useState(false);
   console.log({ isAuthenticated })
   useEffect(() => {
     // Establish the connection to SignalR
@@ -69,7 +71,27 @@ const MainMenu = () => {
         console.error("Login failed:", e);
       });
   };
+  const [isNewGame, setIsNewGame] = useState<boolean | null>(null);
 
+  useEffect(() => {
+    const fetchIsNewGame = async () => {
+      try {
+        const value = await AsyncStorage.getItem('isNewGame');
+        if (value === 'false') {
+          setIsNewGame(false)
+        }
+        else {
+          setIsNewGame(true)
+        }
+        
+        console.log({ value });
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    fetchIsNewGame();
+  }, []);
   const handleLogout = () => {
     instance
       .logoutPopup()
@@ -121,7 +143,8 @@ const MainMenu = () => {
               resizeMode="contain"
               style={styles.button3image}
               >
-              <Text style={styles.otherButtonText}>Play</Text>
+
+              <Text style={styles.otherButtonText}>{isNewGame ?"Play" :"Continue"  }</Text>
               </ImageBackground>
             </Pressable>
             <Pressable onPress={() => switchGameState("tournament")} style={styles.otherButton}>
@@ -134,7 +157,7 @@ const MainMenu = () => {
               </ImageBackground>
             </Pressable>
 
-            <Pressable style={styles.otherButton}>
+            <Pressable onPress={()=>setHowToPlayModalVisible(!howToPlayModalVisible)} style={styles.otherButton}>
               <ImageBackground
                 source={images.button2}
                 resizeMode="contain"
@@ -224,6 +247,7 @@ const MainMenu = () => {
             </Pressable>
           }
         </View>
+        <HowToPlay alertModalVisible={howToPlayModalVisible} setAlertModalVisible={setHowToPlayModalVisible} />
       </ImageBackground></Animated.View>
   );
 };
