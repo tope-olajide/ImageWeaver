@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSound } from "@/contexts/SoundContext";
 import HowToPlay from "./HowToPlay";
+import HighScores from "./HighScores";
 
 const storeIdToken = async (idToken: string) => {
   try {
@@ -39,6 +40,7 @@ const MainMenu = () => {
   const isAuthenticated = useIsAuthenticated();
   const { instance } = useMsal();
   const [howToPlayModalVisible, setHowToPlayModalVisible] = useState(false);
+  const [highScoresModalVisible, setHighScoresModalVisible] = useState(false);
   console.log({ isAuthenticated })
   useEffect(() => {
     // Establish the connection to SignalR
@@ -167,7 +169,7 @@ const MainMenu = () => {
               </ImageBackground>
             </Pressable>
 
-            <Pressable style={styles.otherButton}>
+            <Pressable onPress={()=>setHighScoresModalVisible(!highScoresModalVisible)} style={styles.otherButton}>
               <ImageBackground
                 source={images.button4}
                 resizeMode="contain"
@@ -247,7 +249,10 @@ const MainMenu = () => {
             </Pressable>
           }
         </View>
+
         <HowToPlay alertModalVisible={howToPlayModalVisible} setAlertModalVisible={setHowToPlayModalVisible} />
+        <HighScores alertModalVisible={highScoresModalVisible} setAlertModalVisible={setHighScoresModalVisible} />
+
       </ImageBackground></Animated.View>
   );
 };

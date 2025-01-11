@@ -10,6 +10,8 @@ import LevelClearModal from "./LevelClearModal";
 import { gameQuests0, gameQuests1, gameQuests2, gameQuests3, gameQuests4, gameQuests5, gameQuests6, gameQuests7 } from "@/app/gameQuests";
 import { BlobServiceClient } from "@azure/storage-blob";
 import { getToken, initializeMsal } from "@/app/config/getToken";
+import url from "@/app/config/getUrl";
+import SpinnerModal from "./SpinnerModal";
 
 export interface Letter {
     letter: string;
@@ -251,16 +253,17 @@ const MainGame = () => {
         setCurrentQuest(newQuest);
         setFoundQuestsIndex([...foundQuestsIndex, newQuestIndex]);
 
-        saveGameData()
         const isNewGame = await AsyncStorage.getItem('isNewGame');
         if (isNewGame === null || isNewGame === 'true') {
             await AsyncStorage.setItem('isNewGame', 'false');
+             saveGameData()
         }
     };
 
 
-
+    const [isLoading, setIsLoading] = useState(false)
     useEffect(() => {
+        setIsLoading(true)
         const loader = async () => {
             await initializeMsal(); // Ensure MSAL is initialized before getting the token
             const token = await getToken();
@@ -268,7 +271,7 @@ const MainGame = () => {
                 console.error("No token to send");
                 return;
             }
-            const response = await fetch('http://localhost:7071/api/fetchGameData',
+            const response = await fetch(url.fetchGameData,
 
                 {
                     method: 'GET',
@@ -278,10 +281,11 @@ const MainGame = () => {
                     },
                 }
             );
+
             if (response.status === 404) {
                 console.log('No game data found');
                  loadGame();
-                
+                setIsLoading(false)
                 
             } else {
                 const savedGameData = await response.json();
@@ -296,8 +300,10 @@ const MainGame = () => {
                     setLevel(savedGameData[0].level);
                     setCurrentQuestArrayNumber(savedGameData[0].currentQuestArrayNumber); 
                 }
+                setIsLoading(false)
             } 
         }
+
         loader()
     }, []);
     const saveGameData = async () => {
@@ -317,7 +323,7 @@ const MainGame = () => {
                 currentQuest
             }
 
-            await fetch('http://localhost:7071/api/saveGameData', {
+            await fetch(url.saveGameData, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -331,14 +337,13 @@ const MainGame = () => {
         }
     };
 
-
     const calculateCoins = async () => {
         const newCoins = 100 * solution.length;
         setCoins(coins + newCoins);
         setLevel(level + 1);
         setIsHintLocked(true);
         setUnlockedLettersIndex([]);
-        await saveGameData()
+       // await saveGameData()
     };
 
     const checkWord = () => {
@@ -354,6 +359,7 @@ const MainGame = () => {
         }
 
     }
+
     useEffect(() => {
         if (outputLetters.length > 0) {
             checkWord();
@@ -385,7 +391,7 @@ const MainGame = () => {
         const newOutputLetters = [...outputLetters];
 
         newOutputLetters[newNumber] = {
-            letter: randomLetter.toLocaleUpperCase(),
+            letter: randomLetter.toUpperCase(),
             id: String(newNumber),
             isUnLocked: true
         };
@@ -407,23 +413,22 @@ const MainGame = () => {
 
         setCoins(coins - unlockPrice)
         setInputLetters(lettersClone);
-        setUnlockPrice(unlockPrice * 2)
+        setUnlockPrice(unlockPrice * 1)
     }
 
     const toggleHint = () => {
         setIsHintLocked(!isHintLocked);
     };
 
-
-
-    const loadNextLevel = () => {
+    const loadNextLevel = async () => {
         setModalVisible(false);
         loadGame();
+        await saveGameData()
     };
-
 
     return (
         <>
+           <SpinnerModal visible={isLoading} /> 
             {modalVisible ? <LevelClearModal
                 modalVisible={modalVisible}
                 setModalVisible={setModalVisible}

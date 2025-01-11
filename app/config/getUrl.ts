@@ -9,7 +9,8 @@ const url = {
   negotiate: `${BASE_URL}/negotiate`,
     updateLevel: `${BASE_URL}/updatelevel`,
     saveGameData: `${BASE_URL}/saveGameData`,
-    fetchGameData: `${BASE_URL}/fetchGameData`,
+  fetchGameData: `${BASE_URL}/fetchGameData`,
+  fetchHighScores: `${BASE_URL}/fetchHighScores`,
 };
 
 
